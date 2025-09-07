@@ -88,8 +88,15 @@
   .histRow{display:grid; grid-template-columns:64px 1fr 64px; gap:6px; font-size:12px; padding:4px 6px; border-bottom:1px dotted rgba(169,187,255,0.5)}
   .histRow:last-child{border-bottom:none}
 
-  #unlock{position:fixed; inset:0; background:rgba(59,93,201,.96); display:flex; align-items:center; justify-content:center; z-index:9999}
-  #unlock button{font-size:16px; padding:12px 18px; border-radius:8px; border:2px solid var(--c64-border); background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.12)); color:var(--c64-text); cursor:pointer}
+/* Boot overlay */
+#bootOverlay{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-text); display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:monospace;}
+#bootOverlay::before{content:""; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 3px); mix-blend-mode:multiply; opacity:.35;}
+#bootPanel{background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel); border:2px solid var(--c64-border); padding:20px; max-width:600px; width:90%; box-shadow:0 0 0 1px rgba(255,255,255,0.06) inset;}
+#bootText{min-height:150px; white-space:pre-wrap; font-size:14px; line-height:1.4;}
+#bootCursor{display:inline-block; width:8px; height:1em; background:var(--c64-text); margin-left:2px; animation:blink 1s steps(1) infinite;}
+@keyframes blink{50%{opacity:0;}}
+#bootOverlay.fade{opacity:0; transition:opacity .4s ease; pointer-events:none;}
+.bootControls{margin-top:14px; display:flex; flex-direction:column; gap:8px; align-items:flex-start;}
 
   /* Drum machine */
   .drums{display:grid; grid-template-columns:180px repeat(16,1fr); gap:8px; align-items:center}
@@ -111,8 +118,16 @@
 </style>
 </head>
 <body>
+<div id="bootOverlay">
+  <div id="bootPanel">
+    <div id="bootText"><span id="bootCursor"></span></div>
+    <div class="bootControls">
+      <button id="bootStart" class="btn">Enable Sound & Start</button>
+      <label><input type="checkbox" id="bootSkip"> Skip intro next time</label>
+    </div>
+  </div>
+</div>
 <div id="oscWrap"></div>
-<div id="unlock"><button id="unlockBtn" title="Browsers block audio until a user gesture. Click once to enable sound.">CLICK OR PRESS ANY KEY TO ENABLE SOUND</button></div>
 
 <div class="panel">
   <div class="title">C64 Piano — Controls</div>
@@ -543,6 +558,7 @@ get('addVoiceBtn').addEventListener('click', addVoice);
 addVoice();
 
 function playPattern(v, pattern){
+  if(ctx.state!=='running') return;
   stopPlayback(v);
   const startAt=ctx.currentTime+0.05;
   v.prevParams = snapshotParams();
@@ -572,13 +588,55 @@ function stopPlayback(v){
   if(v.prevParams){ setEngine(v.prevParams.engine); applyParams(v.prevParams); v.prevParams=null; }
 }
 
-// Unlock overlay – remove on first gesture (also resumes)
-const unlockEl = document.getElementById('unlock');
-function removeUnlock(){ if(unlockEl && unlockEl.parentNode){ unlockEl.parentNode.removeChild(unlockEl); } }
-async function unlockAudio(){ try{ await ctx.resume(); }catch{} if(ctx.state==='running'){ removeUnlock(); } }
-window.addEventListener('pointerdown', unlockAudio); window.addEventListener('keydown', unlockAudio);
-document.getElementById('unlockBtn').addEventListener('click', unlockAudio);
-if (unlockEl) unlockEl.addEventListener('click', unlockAudio);
+// Boot intro + audio unlock
+async function unlockAudio(){ try{ await ctx.resume(); }catch{} }
+function initBootIntro(){
+  const overlay=document.getElementById('bootOverlay');
+  if(!overlay) return;
+  const skip=localStorage.getItem('c64piano_skip_intro')==='1';
+  if(skip){
+    overlay.remove();
+    window.addEventListener('pointerdown', unlockAudio, {once:true});
+    window.addEventListener('keydown', unlockAudio, {once:true});
+    return;
+  }
+  overlay.style.display='flex';
+  const startBtn=get('bootStart');
+  const skipChk=get('bootSkip');
+  const textEl=get('bootText');
+  const cursor=get('bootCursor');
+  function keyHandler(e){ if(e.code==='Space' || e.key==='Enter'){ e.preventDefault(); start(); } }
+  async function start(){
+    window.removeEventListener('keydown', keyHandler);
+    if(skipChk.checked) localStorage.setItem('c64piano_skip_intro','1');
+    await unlockAudio();
+    await runTypingSequence(textEl, cursor);
+    overlay.classList.add('fade');
+    setTimeout(()=>overlay.remove(),400);
+  }
+  startBtn.addEventListener('click', start);
+  window.addEventListener('keydown', keyHandler);
+  startBtn.focus();
+}
+async function runTypingSequence(textEl,cursor){
+  const lines=[
+    '**** COMMODORE 64 BASIC V2 ****',
+    '64K RAM SYSTEM  38911 BASIC BYTES FREE',
+    '',
+    'READY.',
+    'LOAD "C64 PIANO",8,1',
+    'RUN'
+  ];
+  const delay=ms=>new Promise(r=>setTimeout(r,ms));
+  for(const line of lines){
+    for(const ch of line){
+      cursor.before(document.createTextNode(ch));
+      await delay(20+Math.random()*20);
+    }
+    cursor.before(document.createTextNode('\n'));
+  }
+  await delay(500);
+}
 
 
 
@@ -852,6 +910,7 @@ function createWasmVoice(note, voice=voices[currentVoice]){
 }
 
 function createVoice(note, voice){
+  if(ctx.state!=='running') return {stop:()=>{}};
   return state.engine==='wasm'? createWasmVoice(note,voice) : createSIDVoice(note,voice);
 }
 
@@ -860,6 +919,7 @@ const whites=document.querySelectorAll('.white'); const blacks=document.querySel
 const active=new Map(); const keyMap={}; [...whites,...blacks].forEach(k=>{ const kk=k.dataset.key; if(kk) keyMap[kk.toLowerCase()]=k; });
 
 function noteOn(el){
+  if(ctx.state!=='running') return;
   const n=el.dataset.note;
   const idx=currentVoice;
   const v=createVoice(n, voices[idx]);
@@ -946,6 +1006,7 @@ function playTom(t){ const o=ctx.createOscillator(); o.type='triangle'; const g=
 function playClap(t){ const bursts=[0,0.02,0.04]; bursts.forEach((dly)=>{ const len=2048, buf=ctx.createBuffer(1,len,ctx.sampleRate), data=buf.getChannelData(0); for(let i=0;i<len;i++) data[i]=Math.random()*2-1; const n=ctx.createBufferSource(); n.buffer=buf; n.loop=true; const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2000; bp.Q.value=0.7; const g=ctx.createGain(); g.gain.setValueAtTime(0.7,t+dly); g.gain.exponentialRampToValueAtTime(0.001,t+dly+0.08); n.connect(bp); bp.connect(g); g.connect(master); n.start(t+dly); n.stop(t+dly+0.09); }); }
 function playCowbell(t){ const o1=ctx.createOscillator(), o2=ctx.createOscillator(); o1.type=o2.type='square'; o1.frequency.setValueAtTime(560,t); o2.frequency.setValueAtTime(845,t); const g=ctx.createGain(); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o1.connect(g); o2.connect(g); g.connect(master); o1.start(t); o2.start(t); o1.stop(t+0.22); o2.stop(t+0.22); }
 function triggerDrum(name,t){
+  if(ctx.state!=='running') return;
   const v=voices[currentVoice];
   if(v && v.isRecording){
     v.recording.push({type:'drum', drum:name, t0:(t||ctx.currentTime)-v.recStart});
@@ -999,6 +1060,7 @@ updateADSRVis();
 
 // Initial visuals
 updateWaveVis(); updateFilterVis(); updateADSRVis();
+initBootIntro();
 </script>
 </body>
 </html>
