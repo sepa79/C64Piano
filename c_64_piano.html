@@ -117,10 +117,6 @@
 <div class="panel">
   <div class="title">C64 Piano — Controls</div>
 
-  <div class="row" id="voiceRow">
-    <div class="seg" id="voiceBtns"></div>
-    <button class="segBtn" id="addVoiceBtn" title="Add voice">＋</button>
-  </div>
 
   <!-- Waveform controls: buttons + presets + visual -->
   <div class="row">
@@ -237,13 +233,20 @@
 
     <div class="history">
       <div class="historyHeader">
-        <div class="historyTitle">Played Notes</div>
+        <div class="historyTitle">Pattern Editor</div>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="btn" id="recordBtn" title="Record pattern">⏺</button>
-          <button class="btn" id="stopRecBtn" title="Stop recording" disabled>⏹</button>
-          <div id="patternList" class="seg"></div>
-          <button class="btn" id="replayBtn" title="Replay the recorded notes in sequence">Replay</button>
-          <button class="btn" id="clearBtn" title="Clear the note history">Clear</button>
+          <button class="segBtn" id="voicePrev" title="Previous voice">◀</button>
+          <span class="pill" id="voiceDisp">1</span>
+          <button class="segBtn" id="voiceNext" title="Next voice">▶</button>
+          <button class="segBtn" id="addVoiceBtn" title="Add voice">＋</button>
+          <label style="display:flex;align-items:center;gap:4px">Track
+            <select id="patternSel"></select>
+          </label>
+          <button class="btn" id="savePatternBtn" title="Save recording to track">Save</button>
+          <button class="btn" id="playPatternBtn" title="Play selected track">Play</button>
+          <button class="btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
+          <button class="btn" id="recordPatternBtn" title="Record to track">Record</button>
+          <button class="btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
         </div>
       </div>
       <div class="histList" id="histList" aria-live="polite"></div>
@@ -313,79 +316,120 @@ function addVoice(){
   const canvas=document.createElement('canvas'); canvas.className='osc'; oscWrap.appendChild(canvas);
   const g=canvas.getContext('2d');
   const data=new Uint8Array(analyser.fftSize);
-  const voice={gain, analyser, canvas, ctx:g, data, patterns:[], recording:[], activeRec:new Map(), isRecording:false, recStart:0};
+  const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), recording:[], activeRec:new Map(), isRecording:false, recStart:0, playTimeouts:[]};
   voices.push(voice);
-  const idx=voices.length-1;
-  const btn=document.createElement('button'); btn.className='segBtn'; btn.textContent=idx+1; btn.dataset.idx=idx;
-  btn.addEventListener('click',()=>selectVoice(idx));
-  document.getElementById('voiceBtns').appendChild(btn);
-  if(voices.length===1) selectVoice(0);
+  if(voices.length===1) selectVoice(0); else selectVoice(voices.length-1);
   resizeOsc();
   drawVoice(voice);
 }
 
 function selectVoice(i){
-  currentVoice=i;
-  document.querySelectorAll('#voiceBtns .segBtn').forEach(b=>{ b.classList.toggle('active', parseInt(b.dataset.idx)==i); });
-  renderTracker();
+  if(voices.length===0) return;
+  currentVoice=(i+voices.length)%voices.length;
+  voiceDisp.textContent=currentVoice+1;
+  populatePatternSelect();
+  showPattern();
 }
 
 
-const recordBtn = get('recordBtn');
-const stopRecBtn = get('stopRecBtn');
-const patternList = get('patternList');
+const recordBtn = get('recordPatternBtn');
+const stopBtn = get('stopPatternBtn');
+const playBtn = get('playPatternBtn');
+const clearBtn = get('clearPatternBtn');
+const saveBtn = get('savePatternBtn');
+const patternSel = get('patternSel');
+const voiceDisp = get('voiceDisp');
+const prevVoiceBtn = get('voicePrev');
+const nextVoiceBtn = get('voiceNext');
 
-function renderTracker(){
-  patternList.innerHTML='';
+function populatePatternSelect(){
   const v=voices[currentVoice];
-  v.patterns.forEach((p,i)=>{
-    const b=document.createElement('button');
-    b.className='segBtn';
-    b.textContent=i+1;
-    b.title=`Play pattern ${i+1}`;
-    b.addEventListener('click',()=>playPattern(v,p));
-    patternList.appendChild(b);
-  });
+  patternSel.innerHTML='';
+  for(let i=0;i<v.patterns.length;i++){
+    const o=document.createElement('option');
+    o.value=i;
+    o.textContent=i+1;
+    patternSel.appendChild(o);
+  }
+}
+
+function selectedPatternIndex(){ return parseInt(patternSel.value)||0; }
+
+function showPattern(){
+  const v=voices[currentVoice];
+  const p=v.patterns[selectedPatternIndex()]||[];
+  history=[]; histList.innerHTML=''; activeHist.clear();
+  p.forEach(ev=>{ if(ev.type==='note'){ const entry={note:ev.note,freq:freqFor(ev.note),oct:0,t0:ev.t0,dur:ev.dur}; history.push(entry); renderRow(history.length-1); } });
 }
 
 function startRecording(){
   const v=voices[currentVoice];
+  stopPlayback(v);
+  history=[]; histList.innerHTML=''; activeHist.clear();
   v.recording=[]; v.activeRec=new Map(); v.isRecording=true; v.recStart=ctx.currentTime;
-  recordBtn.disabled=true; stopRecBtn.disabled=false;
+  recordBtn.disabled=true; stopBtn.disabled=false;
 }
 
 function stopRecording(){
   const v=voices[currentVoice];
   if(!v.isRecording) return;
   v.isRecording=false;
-  recordBtn.disabled=false; stopRecBtn.disabled=true;
-  v.patterns.push(v.recording.slice());
+  recordBtn.disabled=false; stopBtn.disabled=true;
   v.activeRec.clear();
-  renderTracker();
 }
 
-  recordBtn.addEventListener('click', startRecording);
-  stopRecBtn.addEventListener('click', stopRecording);
+function savePattern(){
+  const v=voices[currentVoice];
+  v.patterns[selectedPatternIndex()] = v.recording.slice();
+  showPattern();
+}
 
-  get('addVoiceBtn').addEventListener('click', addVoice);
-  addVoice();
+function playSelected(){
+  const v=voices[currentVoice];
+  const p=v.patterns[selectedPatternIndex()]||[];
+  playPattern(v,p);
+}
+
+function clearPattern(){
+  const v=voices[currentVoice];
+  v.patterns[selectedPatternIndex()] = [];
+  history=[]; histList.innerHTML=''; activeHist.clear();
+}
+
+prevVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice-1));
+nextVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice+1));
+recordBtn.addEventListener('click', startRecording);
+stopBtn.addEventListener('click', ()=>{ stopPlayback(voices[currentVoice]); stopRecording(); });
+playBtn.addEventListener('click', playSelected);
+clearBtn.addEventListener('click', clearPattern);
+saveBtn.addEventListener('click', savePattern);
+patternSel.addEventListener('change', showPattern);
+get('addVoiceBtn').addEventListener('click', addVoice);
+addVoice();
 
 function playPattern(v, pattern){
+  stopPlayback(v);
   const startAt=ctx.currentTime+0.05;
   pattern.forEach(ev=>{
     const when=startAt+ev.t0;
     if(ev.type==='note'){
-      setTimeout(()=>{
+      const id=setTimeout(()=>{
         const prevWave=state.wave;
         if(ev.wave) state.wave=ev.wave;
         const voiceNode=createSIDVoice(freqFor(ev.note), v);
         state.wave=prevWave;
         setTimeout(()=>voiceNode.stop(), ev.dur*1000);
       }, Math.max(0,(when-ctx.currentTime)*1000));
+      v.playTimeouts.push(id);
     } else if(ev.type==='drum'){
-      triggerDrum(ev.drum, when);
+      const id=setTimeout(()=>triggerDrum(ev.drum, when), Math.max(0,(when-ctx.currentTime)*1000));
+      v.playTimeouts.push(id);
     }
   });
+}
+
+function stopPlayback(v){
+  if(v.playTimeouts){ v.playTimeouts.forEach(id=>clearTimeout(id)); v.playTimeouts=[]; }
 }
 
 // Unlock overlay – remove on first gesture (also resumes)
@@ -673,20 +717,6 @@ document.addEventListener('keyup',e=>{ const key=e.key.toLowerCase(); const el=k
 
 get('master').addEventListener('input', e=>{ master.gain.value=parseFloat(e.target.value); });
 
-document.getElementById('replayBtn').addEventListener('click',()=>{
-  if(history.length===0) return;
-  const baseT=history[0].t0;
-  const startAt=ctx.currentTime+0.05;
-  history.forEach(h=>{
-    const when=startAt + (h.t0-baseT);
-    const dur=(h.dur||0.15);
-    setTimeout(()=>{
-      const voice=createSIDVoice(h.freq, voices[currentVoice]);
-      setTimeout(()=>voice.stop(), dur*1000);
-    }, Math.max(0, (when-ctx.currentTime)*1000));
-  });
-});
-document.getElementById('clearBtn').addEventListener('click',()=>{ history=[]; histList.innerHTML=''; activeHist.clear(); });
 
 // ======= Drum machine =======
 const drumGrid=get('drums');
