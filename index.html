@@ -388,17 +388,21 @@ class SIDProcessor extends AudioWorkletProcessor {
     this.eventQueue=[];
     this.params={pwmRate:0,pwmDepth:0,vibRate:0,vibCents:0,master:0.2};
     this.silentCount=0;
-    this.port.onmessage = e=>{
+    this.port.onmessage = async e=>{
       const d=e.data;
       if(d.type==='loadWasm'){
-        const module=new WebAssembly.Module(d.bytes);
-        const instance=new WebAssembly.Instance(module,{});
-        this.exports=instance.exports;
-        this.mem=new Float32Array(this.exports.memory.buffer);
-        this.ptr=this.exports.get_buffer_ptr();
-        if(this.exports.init) this.exports.init(sampleRate);
-        this.ready=true;
-        this.port.postMessage({type:'wasmReady'});
+        try{
+          const mod=await WebAssembly.compile(d.bytes.buffer);
+          const inst=await WebAssembly.instantiate(mod,{});
+          this.exports=inst.exports;
+          this.mem=new Float32Array(this.exports.memory.buffer);
+          this.ptr=this.exports.get_buffer_ptr();
+          if(this.exports.init) this.exports.init(sampleRate);
+          this.ready=true;
+          this.port.postMessage({type:'wasmReady'});
+        }catch(err){
+          this.port.postMessage({type:'wasmError', message:err.message});
+        }
       } else {
         this.eventQueue.push(d);
       }
@@ -475,7 +479,16 @@ async function setEngine(type){
           const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
           node.connect(v.gain);
           node.port.postMessage({type:'loadWasm', bytes});
-          node.port.onmessage=e=>{ if(e.data.type==='wasmReady') console.log('WASM ready'); else if(e.data.type==='underrun') console.warn('SID underrun'); };
+          node.port.onmessage=e=>{
+            const t=e.data.type;
+            if(t==='wasmReady') console.log('WASM ready');
+            else if(t==='underrun') console.warn('SID underrun');
+            else if(t==='wasmError'){
+              console.warn('WASM error', e.data.message);
+              showBanner('WASM \u2192 JS');
+              setEngine('js');
+            }
+          };
           v.sidNode=node; v.nextId=0;
         }
       });
@@ -547,7 +560,16 @@ function addVoice(){
     const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
     node.connect(gain); voice.sidNode=node; voice.nextId=0;
     node.port.postMessage({type:'loadWasm', bytes: wasmBytes});
-    node.port.onmessage=e=>{ if(e.data.type==='wasmReady') console.log('WASM ready'); else if(e.data.type==='underrun') console.warn('SID underrun'); };
+    node.port.onmessage=e=>{
+      const t=e.data.type;
+      if(t==='wasmReady') console.log('WASM ready');
+      else if(t==='underrun') console.warn('SID underrun');
+      else if(t==='wasmError'){
+        console.warn('WASM error', e.data.message);
+        showBanner('WASM \u2192 JS');
+        setEngine('js');
+      }
+    };
   }
   voices.push(voice);
   if(voices.length===1) selectVoice(0); else selectVoice(voices.length-1);
