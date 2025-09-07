@@ -354,7 +354,7 @@ async function setEngine(type){
       await ensureWasmModule();
       voices.forEach(v=>{
         if(!v.sidNode){
-          v.sidNode=new AudioWorkletNode(ctx,'sid-processor',{processorOptions:{wasmBytes}});
+          v.sidNode=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1], processorOptions:{wasmBytes}});
           v.sidNode.connect(v.gain);
           v.nextId=0;
         }
@@ -423,7 +423,7 @@ function addVoice(){
   const data=new Uint8Array(analyser.fftSize);
   const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), recording:[], activeRec:new Map(), isRecording:false, recStart:0, playTimeouts:[]};
   if(state.engine==='wasm' && wasmBytes){
-    const node=new AudioWorkletNode(ctx,'sid-processor',{processorOptions:{wasmBytes}});
+    const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1], processorOptions:{wasmBytes}});
     node.connect(gain); voice.sidNode=node; voice.nextId=0;
   }
   voices.push(voice);
