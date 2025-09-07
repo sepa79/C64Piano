@@ -4,9 +4,15 @@ C64Piano is a retro-styled browser piano inspired by the Commodore 64. It showca
 
 ## Version
 
-Current version: 0.1.0
+Current version: 0.2.0
 
 ## Changelog
+
+### 0.2.0
+- Applied phosphor-green C64 theme with embedded pixel font and CRT scanlines.
+- Added C64 boot intro overlay with audio unlock and refined WASM warning.
+- Enabled WebAssembly synth engine and fixed related audio issues.
+- Added toggleable JS/WASM engine and file-protocol warning for WASM.
 
 ### 0.1.0
 - Added background waveform oscilloscope.
