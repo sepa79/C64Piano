@@ -29,3 +29,7 @@ Current version: 0.2.1
 
 GitHub Pages does not set the cross‑origin headers required for `SharedArrayBuffer` or `Atomics` and often serves WASM with an incorrect MIME type. The synth therefore loads WebAssembly from raw bytes inside an `AudioWorklet` and avoids `instantiateStreaming` to remain compatible across browsers.
 The SID WebAssembly module is embedded in `index.html` as a base64 string so no external file is required.
+
+## Font License
+
+C64 Pro Mono font © Style64, used under their web embedding terms (https://style64.org/c64-truetype). The font is embedded solely for display in this page and is not redistributed separately.
