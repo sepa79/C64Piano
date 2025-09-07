@@ -28,11 +28,9 @@
   body::before{ background: repeating-linear-gradient( to bottom, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 3px ); mix-blend-mode:multiply; opacity:.35; }
   body::after{ box-shadow: inset 0 0 200px rgba(0,0,0,0.35), inset 0 0 100px rgba(0,0,0,0.2); }
 
-  /* Background oscilloscope */
-  #oscilloscope{
-    position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none;
-    opacity:0.2;
-  }
+  /* Background oscilloscopes */
+  #oscWrap{position:fixed; inset:0; display:flex; flex-direction:column; z-index:0; pointer-events:none;}
+  #oscWrap canvas{flex:1; width:100%; opacity:0.2;}
 
   .panel{
     background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel);
@@ -113,11 +111,16 @@
 </style>
 </head>
 <body>
-<canvas id="oscilloscope"></canvas>
+<div id="oscWrap"></div>
 <div id="unlock"><button id="unlockBtn" title="Browsers block audio until a user gesture. Click once to enable sound.">CLICK OR PRESS ANY KEY TO ENABLE SOUND</button></div>
 
 <div class="panel">
   <div class="title">C64 Piano — Controls</div>
+
+  <div class="row" id="voiceRow">
+    <div class="seg" id="voiceBtns"></div>
+    <button class="segBtn" id="addVoiceBtn" title="Add voice">＋</button>
+  </div>
 
   <!-- Waveform controls: buttons + presets + visual -->
   <div class="row">
@@ -235,7 +238,10 @@
     <div class="history">
       <div class="historyHeader">
         <div class="historyTitle">Played Notes</div>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn" id="recordBtn" title="Record pattern">⏺</button>
+          <button class="btn" id="stopRecBtn" title="Stop recording" disabled>⏹</button>
+          <div id="patternList" class="seg"></div>
           <button class="btn" id="replayBtn" title="Replay the recorded notes in sequence">Replay</button>
           <button class="btn" id="clearBtn" title="Clear the note history">Clear</button>
         </div>
@@ -261,9 +267,126 @@
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const ctx = new AudioContext({ latencyHint: 'interactive' });
 function ensureAudio(){ if(ctx.state!=='running') ctx.resume(); }
-const master = ctx.createGain(); master.gain.value = 0.8;
-const analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
-master.connect(analyser); analyser.connect(ctx.destination);
+const get = (id)=>document.getElementById(id);
+function valNum(id, fallback=0){ const el=get(id); return el?parseFloat(el.value):fallback; }
+const master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+
+// Voices and oscilloscopes
+const oscWrap = document.getElementById('oscWrap');
+const voices = [];
+let currentVoice = 0;
+
+function resizeOsc(){
+  const h = window.innerHeight / (voices.length || 1);
+  voices.forEach(v=>{
+    v.canvas.width = window.innerWidth;
+    v.canvas.height = h;
+  });
+}
+window.addEventListener('resize', resizeOsc);
+
+function drawVoice(v){
+  function draw(){
+    requestAnimationFrame(draw);
+    v.analyser.getByteTimeDomainData(v.data);
+    v.ctx.fillStyle='rgba(0,0,0,0.05)';
+    v.ctx.fillRect(0,0,v.canvas.width,v.canvas.height);
+    v.ctx.lineWidth=2;
+    v.ctx.strokeStyle='rgba(214,224,255,0.6)';
+    v.ctx.beginPath();
+    const slice=v.canvas.width/v.data.length;
+    let x=0;
+    for(let i=0;i<v.data.length;i++){
+      const y=(v.data[i]/128)*v.canvas.height/2;
+      if(i===0) v.ctx.moveTo(x,y); else v.ctx.lineTo(x,y);
+      x+=slice;
+    }
+    v.ctx.stroke();
+  }
+  draw();
+}
+
+function addVoice(){
+  const gain=ctx.createGain(); gain.gain.value=1;
+  const analyser=ctx.createAnalyser(); analyser.fftSize=2048;
+  gain.connect(analyser); analyser.connect(master);
+  const canvas=document.createElement('canvas'); canvas.className='osc'; oscWrap.appendChild(canvas);
+  const g=canvas.getContext('2d');
+  const data=new Uint8Array(analyser.fftSize);
+  const voice={gain, analyser, canvas, ctx:g, data, patterns:[], recording:[], activeRec:new Map(), isRecording:false, recStart:0};
+  voices.push(voice);
+  const idx=voices.length-1;
+  const btn=document.createElement('button'); btn.className='segBtn'; btn.textContent=idx+1; btn.dataset.idx=idx;
+  btn.addEventListener('click',()=>selectVoice(idx));
+  document.getElementById('voiceBtns').appendChild(btn);
+  if(voices.length===1) selectVoice(0);
+  resizeOsc();
+  drawVoice(voice);
+}
+
+function selectVoice(i){
+  currentVoice=i;
+  document.querySelectorAll('#voiceBtns .segBtn').forEach(b=>{ b.classList.toggle('active', parseInt(b.dataset.idx)==i); });
+  renderTracker();
+}
+
+
+const recordBtn = get('recordBtn');
+const stopRecBtn = get('stopRecBtn');
+const patternList = get('patternList');
+
+function renderTracker(){
+  patternList.innerHTML='';
+  const v=voices[currentVoice];
+  v.patterns.forEach((p,i)=>{
+    const b=document.createElement('button');
+    b.className='segBtn';
+    b.textContent=i+1;
+    b.title=`Play pattern ${i+1}`;
+    b.addEventListener('click',()=>playPattern(v,p));
+    patternList.appendChild(b);
+  });
+}
+
+function startRecording(){
+  const v=voices[currentVoice];
+  v.recording=[]; v.activeRec=new Map(); v.isRecording=true; v.recStart=ctx.currentTime;
+  recordBtn.disabled=true; stopRecBtn.disabled=false;
+}
+
+function stopRecording(){
+  const v=voices[currentVoice];
+  if(!v.isRecording) return;
+  v.isRecording=false;
+  recordBtn.disabled=false; stopRecBtn.disabled=true;
+  v.patterns.push(v.recording.slice());
+  v.activeRec.clear();
+  renderTracker();
+}
+
+  recordBtn.addEventListener('click', startRecording);
+  stopRecBtn.addEventListener('click', stopRecording);
+
+  get('addVoiceBtn').addEventListener('click', addVoice);
+  addVoice();
+
+function playPattern(v, pattern){
+  const startAt=ctx.currentTime+0.05;
+  pattern.forEach(ev=>{
+    const when=startAt+ev.t0;
+    if(ev.type==='note'){
+      setTimeout(()=>{
+        const prevWave=state.wave;
+        if(ev.wave) state.wave=ev.wave;
+        const voiceNode=createSIDVoice(freqFor(ev.note), v);
+        state.wave=prevWave;
+        setTimeout(()=>voiceNode.stop(), ev.dur*1000);
+      }, Math.max(0,(when-ctx.currentTime)*1000));
+    } else if(ev.type==='drum'){
+      triggerDrum(ev.drum, when);
+    }
+  });
+}
 
 // Unlock overlay – remove on first gesture (also resumes)
 const unlockEl = document.getElementById('unlock');
@@ -273,33 +396,7 @@ window.addEventListener('pointerdown', unlockAudio); window.addEventListener('ke
 document.getElementById('unlockBtn').addEventListener('click', unlockAudio);
 if (unlockEl) unlockEl.addEventListener('click', unlockAudio);
 
-const get = (id)=>document.getElementById(id);
-function valNum(id, fallback=0){ const el=get(id); return el?parseFloat(el.value):fallback; }
 
-const scopeCanvas = document.getElementById('oscilloscope');
-const scopeCtx = scopeCanvas.getContext('2d');
-function resizeScope(){ scopeCanvas.width = window.innerWidth; scopeCanvas.height = window.innerHeight; }
-resizeScope(); window.addEventListener('resize', resizeScope);
-const scopeData = new Uint8Array(analyser.fftSize);
-function drawScope(){
-  requestAnimationFrame(drawScope);
-  analyser.getByteTimeDomainData(scopeData);
-  scopeCtx.fillStyle='rgba(0,0,0,0.05)';
-  scopeCtx.fillRect(0,0,scopeCanvas.width,scopeCanvas.height);
-  scopeCtx.lineWidth=2;
-  scopeCtx.strokeStyle='rgba(214,224,255,0.6)';
-  scopeCtx.beginPath();
-  const slice=scopeCanvas.width/scopeData.length;
-  let x=0;
-  for(let i=0;i<scopeData.length;i++){
-    const v=scopeData[i]/128;
-    const y=v*scopeCanvas.height/2;
-    if(i===0) scopeCtx.moveTo(x,y); else scopeCtx.lineTo(x,y);
-    x+=slice;
-  }
-  scopeCtx.stroke();
-}
-drawScope();
 
 // Bit‑crusher flavor (8‑bit)
 function makeCrusher(bits=8){ const steps = 2**bits; const curve = new Float32Array(65536); for(let i=0;i<curve.length;i++){ const x=i/65535*2-1; const q=Math.round((x*0.5+0.5)*(steps-1))/(steps-1); curve[i]=(q-0.5)*2;} const sh=ctx.createWaveShaper(); sh.curve=curve; sh.oversample='4x'; return sh; }
@@ -474,7 +571,7 @@ function updateADSRVis(){
 }
 
 // ======= Synth voice =======
-function createSIDVoice(note){
+function createSIDVoice(note, voice=voices[currentVoice]){
   ensureAudio();
   const now=ctx.currentTime; const f=freqFor(note);
   const waveSel=state.wave; const cutoff=valNum('sidCutoff',1700); const res=valNum('sidRes',5);
@@ -494,7 +591,7 @@ function createSIDVoice(note){
   } else {
     source.connect(vca);
   }
-  if(crushOn){ vca.connect(crusher); crusher.connect(master);} else { vca.connect(master); }
+  if(crushOn){ vca.connect(crusher); crusher.connect(voice.gain);} else { vca.connect(voice.gain); }
 
   // Envelope
   vca.gain.setValueAtTime(0,now); vca.gain.linearRampToValueAtTime(1,now+A); vca.gain.linearRampToValueAtTime(S,now+A+D);
@@ -525,9 +622,42 @@ function fmtNote(n, o){ return n + (o>0? ('+'+o) : (o<0? o : '')); }
 function renderRow(i){ const h=history[i]; const baseT=(history[0]?history[0].t0:h.t0); const rel=h.t0-baseT; const row=document.createElement('div'); row.className='histRow'; row.id='hist-'+i; row.innerHTML=`<div>${fmtTime(rel)}</div><div>${fmtNote(h.note,h.oct)}</div><div class="dur">${h.dur?fmtTime(h.dur):''}</div>`; histList.appendChild(row); histList.scrollTop=histList.scrollHeight; }
 function updateRow(i){ const row=document.getElementById('hist-'+i); if(!row) return; const durEl=row.querySelector('.dur'); const h=history[i]; if(durEl) durEl.textContent=h.dur?fmtTime(h.dur):''; }
 
-function noteOn(el){ const n=el.dataset.note; const v=createSIDVoice(n); active.set(el,v); el.classList.add('active'); // history add
-  const entry={ note:n, freq:freqFor(n), oct:octave, t0:ctx.currentTime, t1:null, dur:null }; const idx=history.push(entry)-1; activeHist.set(el, idx); renderRow(idx); }
-function noteOff(el){ const v=active.get(el); if(v){ v.stop(); active.delete(el);} el.classList.remove('active'); const idx=activeHist.get(el); if(idx!=null){ history[idx].t1=ctx.currentTime; history[idx].dur=Math.max(0.01, history[idx].t1-history[idx].t0); updateRow(idx); activeHist.delete(el);} }
+function noteOn(el){
+  const n=el.dataset.note;
+  const idx=currentVoice;
+  const v=createSIDVoice(n, voices[idx]);
+  active.set(el,{node:v, voiceIndex:idx});
+  el.classList.add('active');
+  const entry={ note:n, freq:freqFor(n), oct:octave, t0:ctx.currentTime, t1:null, dur:null };
+  const hIdx=history.push(entry)-1; activeHist.set(el, hIdx); renderRow(hIdx);
+  const vVoice=voices[idx];
+  if(vVoice.isRecording){
+    const rec={type:'note', note:n, wave:state.wave, t0:ctx.currentTime - vVoice.recStart, dur:null};
+    const recIdx=vVoice.recording.push(rec)-1;
+    vVoice.activeRec.set(el, recIdx);
+  }
+}
+function noteOff(el){
+  const act=active.get(el);
+  if(act){ act.node.stop(); active.delete(el); }
+  el.classList.remove('active');
+  const hIdx=activeHist.get(el);
+  if(hIdx!=null){
+    history[hIdx].t1=ctx.currentTime;
+    history[hIdx].dur=Math.max(0.01, history[hIdx].t1-history[hIdx].t0);
+    updateRow(hIdx); activeHist.delete(el);
+  }
+  const idx=act?act.voiceIndex:currentVoice;
+  const vVoice=voices[idx];
+  if(vVoice.isRecording){
+    const recIdx=vVoice.activeRec.get(el);
+    if(recIdx!=null){
+      const rec=vVoice.recording[recIdx];
+      rec.dur=Math.max(0.01, ctx.currentTime - vVoice.recStart - rec.t0);
+      vVoice.activeRec.delete(el);
+    }
+  }
+}
 
 whites.forEach(w=>{ w.addEventListener('mousedown',e=>{ if(e.button!==0) return; noteOn(w); }); w.addEventListener('mouseup',()=>noteOff(w)); w.addEventListener('mouseleave',()=>noteOff(w)); w.addEventListener('touchstart',e=>{ e.preventDefault(); noteOn(w); },{passive:false}); w.addEventListener('touchend',e=>{ e.preventDefault(); noteOff(w); },{passive:false}); });
 blacks.forEach(b=>{ const down=e=>{ e.stopPropagation(); if(e.type==='mousedown'&&e.button!==0) return; noteOn(b); }; const up=e=>{ e.stopPropagation(); noteOff(b); }; b.addEventListener('mousedown',down); b.addEventListener('mouseup',up); b.addEventListener('mouseleave',up); b.addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); noteOn(b); },{passive:false}); b.addEventListener('touchend',e=>{ e.preventDefault(); e.stopPropagation(); noteOff(b); },{passive:false}); });
@@ -544,7 +674,17 @@ document.addEventListener('keyup',e=>{ const key=e.key.toLowerCase(); const el=k
 get('master').addEventListener('input', e=>{ master.gain.value=parseFloat(e.target.value); });
 
 document.getElementById('replayBtn').addEventListener('click',()=>{
-  if(history.length===0) return; const baseT=history[0].t0; const startAt=ctx.currentTime+0.05; history.forEach(h=>{ const when=startAt + (h.t0-baseT); const dur=(h.dur||0.15); setTimeout(()=>{ const voice=createSIDVoice(h.freq); setTimeout(()=>voice.stop(), dur*1000); }, Math.max(0, (when-ctx.currentTime)*1000)); });
+  if(history.length===0) return;
+  const baseT=history[0].t0;
+  const startAt=ctx.currentTime+0.05;
+  history.forEach(h=>{
+    const when=startAt + (h.t0-baseT);
+    const dur=(h.dur||0.15);
+    setTimeout(()=>{
+      const voice=createSIDVoice(h.freq, voices[currentVoice]);
+      setTimeout(()=>voice.stop(), dur*1000);
+    }, Math.max(0, (when-ctx.currentTime)*1000));
+  });
 });
 document.getElementById('clearBtn').addEventListener('click',()=>{ history=[]; histList.innerHTML=''; activeHist.clear(); });
 
@@ -577,7 +717,13 @@ function playHat(t){ const len=2048, buf=ctx.createBuffer(1,len,ctx.sampleRate),
 function playTom(t){ const o=ctx.createOscillator(); o.type='triangle'; const g=ctx.createGain(); g.gain.setValueAtTime(1,t); o.frequency.setValueAtTime(220,t); o.frequency.exponentialRampToValueAtTime(120,t+0.12); g.gain.exponentialRampToValueAtTime(0.001,t+0.18); o.connect(g); g.connect(master); o.start(t); o.stop(t+0.2); }
 function playClap(t){ const bursts=[0,0.02,0.04]; bursts.forEach((dly)=>{ const len=2048, buf=ctx.createBuffer(1,len,ctx.sampleRate), data=buf.getChannelData(0); for(let i=0;i<len;i++) data[i]=Math.random()*2-1; const n=ctx.createBufferSource(); n.buffer=buf; n.loop=true; const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2000; bp.Q.value=0.7; const g=ctx.createGain(); g.gain.setValueAtTime(0.7,t+dly); g.gain.exponentialRampToValueAtTime(0.001,t+dly+0.08); n.connect(bp); bp.connect(g); g.connect(master); n.start(t+dly); n.stop(t+dly+0.09); }); }
 function playCowbell(t){ const o1=ctx.createOscillator(), o2=ctx.createOscillator(); o1.type=o2.type='square'; o1.frequency.setValueAtTime(560,t); o2.frequency.setValueAtTime(845,t); const g=ctx.createGain(); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o1.connect(g); o2.connect(g); g.connect(master); o1.start(t); o2.start(t); o1.stop(t+0.22); o2.stop(t+0.22); }
-function triggerDrum(name,t){ ({Kick:playKick,Snare:playSnare,Hat:playHat,Tom:playTom,Clap:playClap,Cowbell:playCowbell}[name] || playKick)(t); }
+function triggerDrum(name,t){
+  const v=voices[currentVoice];
+  if(v && v.isRecording){
+    v.recording.push({type:'drum', drum:name, t0:(t||ctx.currentTime)-v.recStart});
+  }
+  ({Kick:playKick,Snare:playSnare,Hat:playHat,Tom:playTom,Clap:playClap,Cowbell:playCowbell}[name] || playKick)(t);
+}
 
 let isPlaying=false, currStep=0, schedId=null, lastSchedule=0;
 function schedule(){ const bpm=valNum('bpm',120); const secPerStep=(60/bpm)/4; const lookahead=0.1; const now=ctx.currentTime; while(lastSchedule < now+lookahead){ for(let r=0;r<4;r++){ if(pattern[r][currStep]) triggerDrum(rowInstruments[r], lastSchedule); } // highlight
