@@ -28,6 +28,12 @@
   body::before{ background: repeating-linear-gradient( to bottom, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 3px ); mix-blend-mode:multiply; opacity:.35; }
   body::after{ box-shadow: inset 0 0 200px rgba(0,0,0,0.35), inset 0 0 100px rgba(0,0,0,0.2); }
 
+  /* Background oscilloscope */
+  #oscilloscope{
+    position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none;
+    opacity:0.2;
+  }
+
   .panel{
     background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel);
     border:2px solid var(--c64-border); border-radius:12px; padding:14px 16px; margin:12px; max-width:1200px; width:calc(100% - 24px);
@@ -107,6 +113,7 @@
 </style>
 </head>
 <body>
+<canvas id="oscilloscope"></canvas>
 <div id="unlock"><button id="unlockBtn" title="Browsers block audio until a user gesture. Click once to enable sound.">CLICK OR PRESS ANY KEY TO ENABLE SOUND</button></div>
 
 <div class="panel">
@@ -254,7 +261,9 @@
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const ctx = new AudioContext({ latencyHint: 'interactive' });
 function ensureAudio(){ if(ctx.state!=='running') ctx.resume(); }
-const master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+const master = ctx.createGain(); master.gain.value = 0.8;
+const analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
+master.connect(analyser); analyser.connect(ctx.destination);
 
 // Unlock overlay – remove on first gesture (also resumes)
 const unlockEl = document.getElementById('unlock');
@@ -266,6 +275,31 @@ if (unlockEl) unlockEl.addEventListener('click', unlockAudio);
 
 const get = (id)=>document.getElementById(id);
 function valNum(id, fallback=0){ const el=get(id); return el?parseFloat(el.value):fallback; }
+
+const scopeCanvas = document.getElementById('oscilloscope');
+const scopeCtx = scopeCanvas.getContext('2d');
+function resizeScope(){ scopeCanvas.width = window.innerWidth; scopeCanvas.height = window.innerHeight; }
+resizeScope(); window.addEventListener('resize', resizeScope);
+const scopeData = new Uint8Array(analyser.fftSize);
+function drawScope(){
+  requestAnimationFrame(drawScope);
+  analyser.getByteTimeDomainData(scopeData);
+  scopeCtx.fillStyle='rgba(0,0,0,0.05)';
+  scopeCtx.fillRect(0,0,scopeCanvas.width,scopeCanvas.height);
+  scopeCtx.lineWidth=2;
+  scopeCtx.strokeStyle='rgba(214,224,255,0.6)';
+  scopeCtx.beginPath();
+  const slice=scopeCanvas.width/scopeData.length;
+  let x=0;
+  for(let i=0;i<scopeData.length;i++){
+    const v=scopeData[i]/128;
+    const y=v*scopeCanvas.height/2;
+    if(i===0) scopeCtx.moveTo(x,y); else scopeCtx.lineTo(x,y);
+    x+=slice;
+  }
+  scopeCtx.stroke();
+}
+drawScope();
 
 // Bit‑crusher flavor (8‑bit)
 function makeCrusher(bits=8){ const steps = 2**bits; const curve = new Float32Array(65536); for(let i=0;i<curve.length;i++){ const x=i/65535*2-1; const q=Math.round((x*0.5+0.5)*(steps-1))/(steps-1); curve[i]=(q-0.5)*2;} const sh=ctx.createWaveShaper(); sh.curve=curve; sh.oversample='4x'; return sh; }
