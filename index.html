@@ -346,7 +346,7 @@ async function ensureWasmModule(){
 
 function warnFileMode(){
   const msg=document.createElement('div');
-  msg.textContent='WASM engine requires running from an HTTP server. Try http://localhost';
+  msg.textContent='WASM engine requires running from an HTTP server. Try https://sepa79.github.io/C64Piano/';
   Object.assign(msg.style,{
     position:'fixed',top:'10px',left:'50%',transform:'translateX(-50%)',
     background:'rgba(0,0,0,0.8)',color:'var(--c64-accent)',padding:'8px 12px',
@@ -603,27 +603,43 @@ function initBootIntro(){
   overlay.style.display='flex';
   const startBtn=get('bootStart');
   const skipChk=get('bootSkip');
-  const textEl=get('bootText');
   const cursor=get('bootCursor');
-  function keyHandler(e){ if(e.code==='Space' || e.key==='Enter'){ e.preventDefault(); start(); } }
+  const controls=overlay.querySelector('.bootControls');
+  controls.style.display='none';
+
+  const initial=[
+    '**** COMMODORE 64 BASIC V2 ****',
+    '64K RAM SYSTEM  38911 BASIC BYTES FREE',
+    '',
+    'READY.',
+    ''
+  ];
+  cursor.before(document.createTextNode(initial.join('\n')));
+
+  const typingDone=runTypingSequence(cursor).then(()=>{
+    controls.style.display='flex';
+    startBtn.focus();
+  });
+
+  function keyHandler(e){
+    if(controls.style.display!=='none' && (e.code==='Space' || e.key==='Enter')){
+      e.preventDefault();
+      start();
+    }
+  }
   async function start(){
+    await typingDone;
     window.removeEventListener('keydown', keyHandler);
     if(skipChk.checked) localStorage.setItem('c64piano_skip_intro','1');
     await unlockAudio();
-    await runTypingSequence(textEl, cursor);
     overlay.classList.add('fade');
     setTimeout(()=>overlay.remove(),400);
   }
   startBtn.addEventListener('click', start);
   window.addEventListener('keydown', keyHandler);
-  startBtn.focus();
 }
-async function runTypingSequence(textEl,cursor){
+async function runTypingSequence(cursor){
   const lines=[
-    '**** COMMODORE 64 BASIC V2 ****',
-    '64K RAM SYSTEM  38911 BASIC BYTES FREE',
-    '',
-    'READY.',
     'LOAD "C64 PIANO",8,1',
     'RUN'
   ];
