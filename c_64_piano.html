@@ -342,6 +342,32 @@ const voiceDisp = get('voiceDisp');
 const prevVoiceBtn = get('voicePrev');
 const nextVoiceBtn = get('voiceNext');
 
+// History state – used by pattern editor and note recording
+let history = [];                // {note, freq, oct, t0, t1, dur}
+const activeHist = new Map();    // el -> index
+const histList = document.getElementById('histList');
+
+function fmtTime(sec){ return (sec).toFixed(3)+'s'; }
+function fmtNote(n, o){ return n + (o>0? ('+'+o) : (o<0? o : '')); }
+function renderRow(i){
+  const h = history[i];
+  const baseT = (history[0]?history[0].t0:h.t0);
+  const rel = h.t0-baseT;
+  const row = document.createElement('div');
+  row.className = 'histRow';
+  row.id = 'hist-'+i;
+  row.innerHTML = `<div>${fmtTime(rel)}</div><div>${fmtNote(h.note,h.oct)}</div><div class="dur">${h.dur?fmtTime(h.dur):''}</div>`;
+  histList.appendChild(row);
+  histList.scrollTop = histList.scrollHeight;
+}
+function updateRow(i){
+  const row = document.getElementById('hist-'+i);
+  if(!row) return;
+  const durEl = row.querySelector('.dur');
+  const h = history[i];
+  if(durEl) durEl.textContent = h.dur?fmtTime(h.dur):'';
+}
+
 function populatePatternSelect(){
   const v=voices[currentVoice];
   patternSel.innerHTML='';
@@ -655,16 +681,6 @@ function createSIDVoice(note, voice=voices[currentVoice]){
 // === Piano UI wiring + history ===
 const whites=document.querySelectorAll('.white'); const blacks=document.querySelectorAll('.black');
 const active=new Map(); const keyMap={}; [...whites,...blacks].forEach(k=>{ const kk=k.dataset.key; if(kk) keyMap[kk.toLowerCase()]=k; });
-
-// History state
-let history=[];               // {note, freq, oct, t0, t1, dur}
-const activeHist=new Map();   // el -> index
-const histList = document.getElementById('histList');
-
-function fmtTime(sec){ return (sec).toFixed(3)+'s'; }
-function fmtNote(n, o){ return n + (o>0? ('+'+o) : (o<0? o : '')); }
-function renderRow(i){ const h=history[i]; const baseT=(history[0]?history[0].t0:h.t0); const rel=h.t0-baseT; const row=document.createElement('div'); row.className='histRow'; row.id='hist-'+i; row.innerHTML=`<div>${fmtTime(rel)}</div><div>${fmtNote(h.note,h.oct)}</div><div class="dur">${h.dur?fmtTime(h.dur):''}</div>`; histList.appendChild(row); histList.scrollTop=histList.scrollHeight; }
-function updateRow(i){ const row=document.getElementById('hist-'+i); if(!row) return; const durEl=row.querySelector('.dur'); const h=history[i]; if(durEl) durEl.textContent=h.dur?fmtTime(h.dur):''; }
 
 function noteOn(el){
   const n=el.dataset.note;
