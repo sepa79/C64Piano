@@ -329,9 +329,27 @@ async function ensureWasmModule(){
   await ctx.audioWorklet.addModule(URL.createObjectURL(blob));
 }
 
+function warnFileMode(){
+  const msg=document.createElement('div');
+  msg.textContent='WASM engine requires running from an HTTP server. Try http://localhost';
+  Object.assign(msg.style,{
+    position:'fixed',top:'10px',left:'50%',transform:'translateX(-50%)',
+    background:'rgba(0,0,0,0.8)',color:'var(--c64-accent)',padding:'8px 12px',
+    border:'2px solid var(--c64-border)',borderRadius:'8px',zIndex:10000
+  });
+  document.body.appendChild(msg);
+  setTimeout(()=>msg.remove(),4000);
+}
+
 async function setEngine(type){
   if(state.engine===type) return;
   if(type==='wasm'){
+    if(window.location.protocol==='file:'){
+      console.warn('WASM engine requires running from an HTTP server; falling back to JS');
+      warnFileMode();
+      setEngineButtons('js');
+      return;
+    }
     try{
       await ensureWasmModule();
       voices.forEach(v=>{
