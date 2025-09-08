@@ -164,6 +164,18 @@
   @media (max-width: 980px){ :root{ --key-w:54px; --key-h:200px; } .drums{grid-template-columns:140px repeat(16,1fr)} }
   @media (max-width: 760px){ :root{ --key-w:46px; --key-h:180px; --black-w:32px; --black-h:116px; } .drums{grid-template-columns:110px repeat(16,1fr)} }
   @media (max-width: 560px){ :root{ --key-w:40px; --key-h:160px; --black-w:28px; --black-h:100px; } }
+
+  /* App layout */
+  #layout{display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr auto; gap:20px;}
+  #leftRegion,#middleRegion,#rightRegion{display:flex; flex-direction:column; gap:12px;}
+  #drumMachineWrap{grid-column:1 / span 2;}
+  #topBar{margin-bottom:20px;}
+  #rightRegion{overflow:auto;}
+  #rightRegion .tracker{flex:1; border:2px solid var(--c64-border); border-radius:8px; padding:8px; overflow:auto;}
+  #rightRegion .tracker + .tracker{margin-top:12px;}
+  .tabBtns{display:flex; gap:6px; margin-bottom:8px;}
+  .tabContent{display:none;}
+  .tabContent.active{display:block;}
 </style>
 </head>
 <body>
@@ -180,17 +192,32 @@
 
 <div class="c64-window">
   <div class="c64-title">C64 PIANO / TRACKER</div>
-  <div class="block">
-  <div class="title">C64 Piano — Controls</div>
-  <!-- Engine toggle -->
-  <div class="row">
-    <div class="c64-seg" id="engineBtns" title="Select synth engine">
-      <button class="segBtn active" data-eng="js" aria-pressed="true">JS</button>
-      <button class="segBtn" data-eng="wasm">WASM</button>
+  <div id="topBar" class="block">
+    <div class="row">
+      <label>Project <select id="projectSel"></select></label>
+      <div class="c64-seg" id="engineBtns" title="Select synth engine">
+        <button class="segBtn active" data-eng="js" aria-pressed="true">JS</button>
+        <button class="segBtn" data-eng="wasm">WASM</button>
+      </div>
+      <label>Global Track Length <input id="globalTrackLen" type="number" min="1" value="16"></label>
+      <label>Quantize <input id="quantize" type="number" min="1" value="1"></label>
+      <button class="c64-btn" id="loadBtnTop">Load</button>
+      <button class="c64-btn" id="saveBtnTop">Save</button>
+      <button class="c64-btn" id="saveAsBtnTop">Save As</button>
+      <div class="transport" style="margin-left:auto">
+        <button class="c64-btn" id="transportPlay">Play</button>
+        <button class="c64-btn" id="transportStop">Stop</button>
+        <span class="pill" id="transportStatus">●</span>
+      </div>
     </div>
   </div>
 
-  <!-- Waveform controls: buttons + presets + visual -->
+  <div id="layout">
+    <div id="leftRegion">
+      <div class="block">
+        <div class="title">C64 Piano — Controls</div>
+    <!-- Engine toggle moved to top bar -->
+    <!-- Waveform controls: buttons + presets + visual -->
   <div class="row">
     <div class="c64-seg" id="waveBtns" title="Select waveform">
       <button class="segBtn active" data-wave="pulse" aria-pressed="true" title="Pulse (square)">
@@ -282,9 +309,10 @@
   </div>
 
   <div class="note">Keys: A S D F G H J K (white) and W E T Y U (black). Octave with , and . (display shows &lt; / &gt;).</div>
-  </div>
-
-  <div class="block">
+      </div>
+    </div>
+    <div id="middleRegion">
+      <div class="block">
   <div class="title">C64 Piano — Keyboard</div>
   <div class="kbdWrap">
     <div class="kbd" id="kbd">
@@ -310,7 +338,6 @@
           <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
           <span class="pill" id="voiceDisp">1</span>
           <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
-          <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
           <label style="display:flex;align-items:center;gap:4px">Track
             <select id="patternSel"></select>
           </label>
@@ -324,9 +351,21 @@
       <div class="histList" id="histList" aria-live="polite"></div>
     </div>
   </div>
-</div>
-
-  <div class="block">
+      </div>
+    </div>
+    <div id="rightRegion">
+      <div class="block tracker">
+        <div class="title">Voice 1</div>
+        <div id="tracker1"></div>
+      </div>
+      <div class="block tracker">
+        <div class="title">Voice 2</div>
+        <div id="tracker2"></div>
+      </div>
+      <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
+    </div>
+    <div id="drumMachineWrap">
+      <div class="block">
   <div class="title">C64‑style Drum Machine</div>
   <div class="drums" id="drums"></div>
   <div class="transport">
@@ -335,8 +374,9 @@
     <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
     <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
   </div>
-</div>
-
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
