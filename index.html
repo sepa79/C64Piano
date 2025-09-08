@@ -129,9 +129,9 @@
   .ctrlCard .topRow .ctrls{flex:0 0 auto;min-width:180px}
   .ctrlCard .sliderCol{width:100%}
   #instCard{flex-direction:column;flex:0 0 140px}
-  #instCard .ctrls{min-width:0;gap:4px}
-  #instCard label span{width:auto}
-  #instCard .row{display:flex;gap:4px}
+  #instCard .ctrls{min-width:0;gap:4px;display:flex;flex-wrap:wrap}
+  #instCard button{flex:1 1 60px}
+  #instCard button.active{background:var(--c64-fg);color:#201050}
   .octControls{display:flex;align-items:center;gap:6px;justify-content:center}
   .octBtns{display:flex;gap:4px}
   .octBtns button.active{background:var(--c64-fg);color:#201050}
@@ -413,14 +413,7 @@
   <div class="title">C64 Piano — Keyboard<button class="cardHelp" data-help="keyboard">?</button></div>
   <div class="kbdWrap">
     <div class="ctrlCard" id="instCard">
-      <div class="ctrls">
-        <label><span>Instrument</span><select id="instrumentSel"></select></label>
-        <div class="row">
-          <button class="c64-btn" id="instLoadBtn" title="Load instrument">⬇</button>
-          <button class="c64-btn" id="instSaveBtn" title="Save instrument">💾</button>
-          <button class="c64-btn" id="instSaveAsBtn" title="Save instrument as">✎</button>
-        </div>
-      </div>
+      <div class="ctrls" id="instBtnWrap"></div>
     </div>
     <div class="kbd" id="kbd">
       <div class="key white" data-note="C" data-key="A"><span class="kLabel">C</span><span class="hint" title="Press A">A</span></div>
@@ -494,7 +487,11 @@
           </div>
         </div>
         <div id="fxTab" class="tabContent">
-          <div class="row" style="justify-content:flex-end">
+          <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">
+            <label><span>Instrument</span><select id="instrumentSel"></select></label>
+            <button class="c64-btn" id="instLoadBtn" title="Load instrument">⬇</button>
+            <button class="c64-btn" id="instSaveBtn" title="Save instrument">💾</button>
+            <button class="c64-btn" id="instSaveAsBtn" title="Save instrument as">✎</button>
             <button class="cardHelp" data-help="fx">?</button>
           </div>
           <div class="row">
@@ -1201,6 +1198,7 @@ Object.entries(sampleInstruments).forEach(([k,v])=>{ if(!instruments[k]) instrum
 localStorage.setItem('instruments',JSON.stringify(instruments));
 const instSel=get('instrumentSel');
 const instName=get('instName');
+const instBtnWrap=get('instBtnWrap');
 function populateInstrumentSelect(){
   if(!instSel) return;
   instSel.innerHTML='';
@@ -1210,11 +1208,39 @@ function populateInstrumentSelect(){
 }
 populateInstrumentSelect();
 function updateInstName(){ if(instName) instName.textContent=instSel.value||'Default'; }
-if(instSel){ instSel.addEventListener('change', updateInstName); updateInstName(); }
+if(instSel){ instSel.addEventListener('change', ()=>selectInstrument(instSel.value)); updateInstName(); }
 
-get('instLoadBtn').addEventListener('click',()=>{ const p=instruments[instSel.value]; if(p) applyParams(p); });
+function selectInstrument(name){
+  if(!instruments[name]) return;
+  instSel.value=name;
+  updateInstName();
+  applyParams(instruments[name]);
+  if(instBtnWrap){
+    [...instBtnWrap.children].forEach(b=>b.classList.toggle('active', b.dataset.inst===name));
+  }
+}
+
+if(instBtnWrap){
+  const shortlist=Object.keys(instruments).slice(0,6);
+  shortlist.forEach(n=>{
+    const btn=document.createElement('button');
+    btn.className='c64-btn';
+    btn.textContent=n;
+    btn.dataset.inst=n;
+    btn.addEventListener('click',()=>selectInstrument(btn.dataset.inst));
+    btn.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      const name=prompt('Instrument name?', btn.dataset.inst);
+      if(name && instruments[name]){ btn.dataset.inst=name; btn.textContent=name; }
+    });
+    instBtnWrap.appendChild(btn);
+  });
+}
+
+get('instLoadBtn').addEventListener('click',()=>{ selectInstrument(instSel.value); });
 get('instSaveBtn').addEventListener('click',()=>{ const name=instSel.value||prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; updateInstName(); });
 get('instSaveAsBtn').addEventListener('click',()=>{ const name=prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; updateInstName(); });
+if(instSel) selectInstrument(instSel.value);
 
 const openFx=get('openFx');
 if(openFx){ openFx.addEventListener('click',()=>{ const btn=document.querySelector('.tabBtn[data-tab="fx"]'); if(btn) btn.click(); }); }
