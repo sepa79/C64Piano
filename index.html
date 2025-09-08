@@ -1035,14 +1035,20 @@ function stopRecording(){
   v.activeRec.clear();
 }
 
+function historyToPattern(){
+  const stepSec=stepSeconds();
+  return history
+    .filter(h=>h.start!=null)
+    .map(h=>({type:'note', note:h.note, t0:h.start*stepSec, dur:h.dur*stepSec, params:snapshotParams()}));
+}
+
 function savePattern(){
   const v=voices[currentVoice];
   const idx=selectedPatternIndex();
   const name=prompt('Pattern name?', v.patternNames[idx]||'');
   if(name===null) return;
   v.patternNames[idx]=name||('Pattern '+(idx+1));
-  const stepSec=stepSeconds();
-  v.patterns[idx] = history.filter(h=>h.start!=null).map(h=>({type:'note', note:h.note, t0:h.start*stepSec, dur:h.dur*stepSec, params:snapshotParams()}));
+  v.patterns[idx] = historyToPattern();
   populatePatternSelect();
   patternSel.value=idx;
   showPattern();
@@ -1058,8 +1064,7 @@ function loadPatternByName(){
 
 function playSelected(){
   const v=voices[currentVoice];
-  const p=v.patterns[selectedPatternIndex()]||[];
-  playPattern(v,p);
+  playPattern(v, historyToPattern());
 }
 
 function clearPattern(){
