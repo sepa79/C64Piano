@@ -1280,7 +1280,7 @@ get('master').addEventListener('input', e=>{
 // ======= Drum machine =======
 const drumGrid=get('drums');
 const steps=16; const rowInstruments=['Snare','Kick','Hat','Tom'];
-const instruments=['Kick','Snare','Hat','Tom','Clap','Cowbell'];
+const drumInstruments=['Kick','Snare','Hat','Tom','Clap','Cowbell'];
 const pattern={0:Array(steps).fill(false),1:Array(steps).fill(false),2:Array(steps).fill(false),3:Array(steps).fill(false)};
 
 function buildGrid(){
@@ -1292,7 +1292,7 @@ function buildGrid(){
   for(let r=0;r<4;r++){
     const left=document.createElement('div'); left.className='rowLbl';
     const tag=document.createElement('span'); tag.className='keytag'; tag.textContent=['Z','X','C','V'][r]; left.appendChild(tag);
-    const sel=document.createElement('select'); sel.className='drumSel'; sel.title='Choose the drum sound for this row'; instruments.forEach(n=>{ const o=document.createElement('option'); o.textContent=n; if(n===rowInstruments[r]) o.selected=true; sel.appendChild(o); }); sel.addEventListener('change',()=>{ rowInstruments[r]=sel.value; }); left.appendChild(sel);
+    const sel=document.createElement('select'); sel.className='drumSel'; sel.title='Choose the drum sound for this row'; drumInstruments.forEach(n=>{ const o=document.createElement('option'); o.textContent=n; if(n===rowInstruments[r]) o.selected=true; sel.appendChild(o); }); sel.addEventListener('change',()=>{ rowInstruments[r]=sel.value; }); left.appendChild(sel);
     drumGrid.appendChild(left);
     for(let i=0;i<steps;i++){ const cell=document.createElement('div'); cell.className='step'; cell.title=`Step ${i+1} (click to toggle)`; if(pattern[r][i]) cell.classList.add('on'); cell.addEventListener('click',()=>{ pattern[r][i]=!pattern[r][i]; cell.classList.toggle('on'); }); drumGrid.appendChild(cell); }
   }
