@@ -1240,7 +1240,6 @@ if(instBtnWrap){
 get('instLoadBtn').addEventListener('click',()=>{ selectInstrument(instSel.value); });
 get('instSaveBtn').addEventListener('click',()=>{ const name=instSel.value||prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; updateInstName(); });
 get('instSaveAsBtn').addEventListener('click',()=>{ const name=prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; updateInstName(); });
-if(instSel) selectInstrument(instSel.value);
 
 const openFx=get('openFx');
 if(openFx){ openFx.addEventListener('click',()=>{ const btn=document.querySelector('.tabBtn[data-tab="fx"]'); if(btn) btn.click(); }); }
@@ -1896,6 +1895,7 @@ Array.from(document.querySelectorAll('#engineBtns .segBtn')).forEach(btn=>{
   btn.addEventListener('click', ()=>{ setEngine(btn.dataset.eng); });
 });
 setEngineButtons(state.engine);
+if(instSel) selectInstrument(instSel.value);
 loadSampleSong();
 updateFilterVis();
 
