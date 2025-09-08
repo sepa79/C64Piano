@@ -122,10 +122,10 @@
   .sliderWrap input[type=range]{flex:1}
   .sliderWrap input[type=number]{width:60px;background:var(--c64-bg);color:var(--c64-fg);border:1px solid var(--c64-border);border-radius:4px;padding:2px}
   .ctrlCard .miniWrap{margin-left:auto;flex-shrink:0}
-  #oscCard{flex-direction:column}
-  #oscCard .topRow{display:flex;gap:12px;align-items:flex-start}
-  #oscCard .topRow .ctrls{flex:1;min-width:0}
-  #oscCard .sliderCol{width:100%}
+  #oscCard, #filterCard{flex-direction:column}
+  .ctrlCard .topRow{display:flex;gap:12px;align-items:flex-start}
+  .ctrlCard .topRow .ctrls{flex:1;min-width:0}
+  .ctrlCard .sliderCol{width:100%}
   .octControls{display:flex;align-items:center;gap:6px;justify-content:center}
 
   .synthSection{border-bottom:1px solid var(--c64-border);padding-bottom:12px;margin-bottom:12px}
@@ -335,30 +335,34 @@
     <div class="synthSection" id="filterSection">
       <div class="sectionHeader"><span>Filter</span><button class="cardHelp" data-help="filter">?</button></div>
       <div class="ctrlCard" id="filterCard">
-    <div class="ctrls">
-      <div class="c64-seg" id="filterBtns" title="Filter type">
-        <button class="segBtn active" data-filter="lowpass" title="Low‑pass">
-          <svg viewBox="0 0 40 20"><path d="M1 18 C12 6, 18 4, 39 4"/></svg> LP
-        </button>
-        <button class="segBtn" data-filter="bandpass" title="Band‑pass">
-          <svg viewBox="0 0 40 20"><path d="M1 18 C10 18, 15 4, 20 4 C25 4, 30 18, 39 18"/></svg> BP
-        </button>
-        <button class="segBtn" data-filter="highpass" title="High‑pass">
-          <svg viewBox="0 0 40 20"><path d="M1 18 C12 18, 18 16, 39 4"/></svg> HP
-        </button>
-        <button class="segBtn" data-filter="off" title="No filter">
-          <svg viewBox="0 0 40 20"><path d="M1 10 H39"/><path d="M4 2 L36 18"/></svg> Off
-        </button>
-      </div>
-      <label title="Filter preset"><span>Preset</span><select id="filterPreset"></select></label>
-      <label title="Adds 8‑bit style grit using a waveshaper."><span>Bit‑crush</span><input id="crush" type="checkbox" checked></label>
-      <label title="Filter cutoff frequency."><span>Cutoff</span><input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
-      <label title="Filter resonance (Q)."><span>Res (Q)</span><input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
-      <label title="Master output volume."><span>Vol</span><input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
-    </div>
-    <div class="miniWrap">
-      <canvas id="filterVis" class="mini" width="180" height="80" title="Filter magnitude"></canvas>
-    </div>
+        <div class="topRow">
+          <div class="ctrls">
+            <div class="c64-seg" id="filterBtns" title="Filter type">
+              <button class="segBtn active" data-filter="lowpass" title="Low‑pass">
+                <svg viewBox="0 0 40 20"><path d="M1 18 C12 6, 18 4, 39 4"/></svg> LP
+              </button>
+              <button class="segBtn" data-filter="bandpass" title="Band‑pass">
+                <svg viewBox="0 0 40 20"><path d="M1 18 C10 18, 15 4, 20 4 C25 4, 30 18, 39 18"/></svg> BP
+              </button>
+              <button class="segBtn" data-filter="highpass" title="High‑pass">
+                <svg viewBox="0 0 40 20"><path d="M1 18 C12 18, 18 16, 39 4"/></svg> HP
+              </button>
+              <button class="segBtn" data-filter="off" title="No filter">
+                <svg viewBox="0 0 40 20"><path d="M1 10 H39"/><path d="M4 2 L36 18"/></svg> Off
+              </button>
+            </div>
+            <label title="Filter preset"><span>Preset</span><select id="filterPreset"></select></label>
+            <label title="Adds 8‑bit style grit using a waveshaper."><span>Bit‑crush</span><input id="crush" type="checkbox" checked></label>
+          </div>
+          <div class="miniWrap">
+            <canvas id="filterVis" class="mini" width="180" height="80" title="Filter magnitude"></canvas>
+          </div>
+        </div>
+        <div class="ctrls sliderCol">
+          <label title="Filter cutoff frequency."><span>Cutoff</span><input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
+          <label title="Filter resonance (Q)."><span>Res (Q)</span><input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
+          <label title="Master output volume."><span>Vol</span><input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
+        </div>
       </div>
     </div>
 
@@ -1205,12 +1209,12 @@ function applyADSRPreset(){
 // ======= Visuals =======
 function clearCanvas(c){ const g=c.getContext('2d'); g.clearRect(0,0,c.width,c.height); return g; }
 
-let waveAnimating=false;
+let waveAnimId=null;
 function updateWaveVis(){
-  if(waveAnimating) return;
-  waveAnimating=true;
+  if(waveAnimId) cancelAnimationFrame(waveAnimId);
   (function loop(){
-    const c=get('waveVis'); if(!c) return;
+    const c=get('waveVis');
+    if(!c){ waveAnimId=null; return; }
     const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2; g.beginPath();
     const wave=state.wave; let pw=parseFloat(get('sidPW').value); const depth=parseFloat(get('sidPWMDepth').value||0); const rate=parseFloat(get('sidPWMRate').value||0);
     if(wave==='pulse'){
@@ -1230,7 +1234,7 @@ function updateWaveVis(){
       for(let x=5;x<=w-5;x+=4){ const y=10 + Math.random()*(h-20); g.lineTo(x,y); }
     }
     g.stroke();
-    requestAnimationFrame(loop);
+    waveAnimId=requestAnimationFrame(loop);
   })();
 }
 
