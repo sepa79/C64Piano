@@ -1,344 +1,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>C64 Piano</title>
-<style>
-  @font-face {
-    font-family: "C64 Pro Mono";
-    src: url("data:font/woff2;base64,d09GMgABAAAAABcUAAsAAAAAZTwAABbCAAE1wwAAAAAAAAAAAAAAAAAAAAAAAAAABmAAj2oRCAqBk1zjSwE2AiQDhHoLhHYABCAFmUAHIB/wSTUyr0Xnbgdol28tG0U5YwtFUTJHhwf8/x8T6JAhZS4Ux9XnkFUQJgptbkzg48QkuIoUy6mZ6JtosVgqykYclpaKkpJq9w/p9SepGBmp/L1kpMZOiSeD+J4FsndM6t3ejb/0sC1yB4IckG/J8ZfyZU5behVSgl2OkDkxeXiiy+/PrapGMk+TFegPLsU0OHFCBvTGy1PgtnuobKDWakrGIDyPczYSkuin7Ruxo6Sb3IQjPhAGhb+T+qTt7AL96J7m4FUY4AJ+wAADzE4XMGBbm6ZQK8BNAiaO3+8tpd91jOd/bTKxZqksJPA0t38umLWVxLtMCfPmiojCxI3NVCy1iuXo3EIvZtc1EeHxkDkDPs+eLk9ERIwaVVXrH9ahE40Xn1FdlwCotQmITrwBPjw6XmtW4V6fvqhugHUu64YUnwiNQy1DCxj/b1qz+ZcbctBD7UPp+06YvVC6Kkrgjs1s/uOW3NDavlAl3fWdmZ0tSe6OWjxoFK52VTXPI5E4HrZLVDMGhEULLD/N9WkzV9orp6Rvq4CNqwRVJX/eezPTmZfZ3CYfk4UPuDmGJEfZLW0dsCMNpABJ15iztW1YKVzAknX5jfkh09cPJCLDbjFIN94NjU7I0mUBVSZdDP7rrHTn/45yK05X0SoIRUERsnYwRT1Qp9RGHM5RY/w6AGvNOu8wtDi/vtORRpicOByVBiYHCRljywJjK83LxPJBY3nU0NNyCoS2AngEaK5yt4f8S+rPeyefkowUxFF/zgRunSiLQ5w0eTyaDBmzQOGYUzmdMzmby3iYa+75JEO1DMpIGa/MVJYVtJLvTtgxgcYOCHwIQoMjQCQaiwngxcJBgCcshZqGuzwioIdBRkmKg4uHVlo7IfIpKE2uEJVqraagV0tHgZ6y1jbe9ZGBPQ46aloeXj62KUUyiyX7AaFCR4mai/wyg7xZOQliG6pmW6rUdLd0lYb6qo6untr/ey8UgOPN6oqxD+Kld/q/1/pNSlry8GvXCN1q85Aih0uDAaNBOUKcSM7t9EGCYHauO56oYmZg6PxggMSaYlex31gcimYblG1q72mgvGmhbOLf8WJc3yeRERAq/wADJJakS48IGx4gtsl7jwLZa81wenx7+0togOpnzUEgYMDe78oTwoaHHa7mnkzV716Zqg33d3p39/sC/5SqJdruQ+TuQZxPt1XnB7qDu90/LwPenYO3F4Q3tnJZAvj3/b/e68vXvU7n7/UA/F7qs0vneG3Eq9/RAdw5sa7ofehe+j/9j46kw+kwOjRAmf7xK341/P98aX4YP/R6vgl8Ib4gX4D9xf5gv7Pf9r0Ae2l6NimsLhcMmfh/mPh3hgpDmaHEEPod9Yfp/0X/D/q/0/+N/q9XoZ/HPMiYjvrn5PD5H8b8TrugIJaFrxeMJYnlIVaMVWNDIDaPLWNrjpeKbYkdY+fYNXaPPWPv2Df2J/aPozubxz93z17Z1WfJtbVzzN2raNeNKq5fCL27r7yZNq+4T3B55tK6l/8H8TTxOcSfJKmQEgkx/F5Ua/PVf4OI34lfE9IQaXrS0qT1SeuS1t4d1hyKtCrGij3StsD+zO7Xex0b29DScsxlipjb1jFPzGuZmC/mx/+VjYzDEkloFge8BBFbgvz4Naurrg5wOTSfhYWNjYDjf5NYXl40mkwmkYhEB7bMWTBv2ZJtv1A8J1hdzZ+I91VBFBg3hk+bX0aLR0/XnRcp3yjAjg37DPzPxCFzVjaWSz8CDLnB6lcNidn1VIds4o0l6gCGQGFwBLI4/cShUNk5OEv44OHl4y93ijvxf/c6ca8v39ZGx+qHDjjxqk8br5vy+pX//IuJS0g2x/FpU1FVU9doToG2jq7e10nwqMiekuE6N0X2WtMcatGvjug6glgQ0t7EMYy5EuPOG5J/Jr0LEiBJspDElaSKcDV4rX559miCLJ949aTjuz7zzO0OTzbvtnQb1k/KPOnNlDuRH9vxpZTp7TK7ebqDhJtYh1taxqrQnH5lOWfP2ZJzRW4hs8/cjUASYL4OkfujyIJn2IVpEmuRUrIvkdCivUKsc3x4MH6tyjKNF0HvHoK1ElB+rr/q4nz8G09zo4ElGtzZtbv1wmoKYV7GFnRyl3ryePCd5uiEbbRf57MR0V2Fd8dYBnvJ/ubF4PybZI4bQZsWktloaV9jQn+VUnMb+UZNTojBHL5u/H3zIV4fS0kj72q+z5vtpSO9jniKkOsTPHswCQx5/oB/lrOCGdqQmeIamfbACXaG9RBHFBC/pRmNV4N0rfLN+5clv+W7ow4h6AjelAUNoyGp3WQmCGaCTz/n8LZZv+E+sOY/90+ZWVX57IjHa9yHjYI1jRdZvYqxxyRLY2OQkYU3rwPslptM9LP5C8W5Be42OQy6PLVZ9yusKim9M7amrIduAbksivwWvUZVCYOiPOuZo6JB9/ohDetosqVyyqAnszJIGwpS1usFdrWzduSENrAC6fzw0WXt9abAFBRw2LAsSkvnrjowu9hxwbBdSz8xqOqqE+gJ40EoF2uxLJG5b5npvG1obCKQeOJkrekpHbkL4sUZsB+prAWCMh3JzTfg27gaBV5vc/MWpcEi5NKU0IM9VDrwdyB7T0oGUcxzo5/DtxCW5P3coiqJbbf1/0D/ou5o7lhRqYgpgxjeC/T4BvbHvPjS2gCZG2zIxpwR+8amzo0skM2DA/ZQj3rc4uX52v6fC45ktNOyN3SdrRaYx+I8RygPwWqMQUK/k5WRgfzWgt2VXvOm6WlcJFFf536jXVHyuESOBJXcvJAGyK6bgh7Rov/y4uS8eyKxoO5iG37us73cBUob3Ux2yHO53W17zqvmd7t7ob2cS3bsS05eIh93eA4/C3pM9j9k5GQY7Ru/GfQN0iOYGehZlTMNnrpXTZj3d5WVvtKHQSlbgEhFmOlqxfvv9zMRP4uylzkeGIq9ZMtmPR5QQDYm6GsKkdcS0GdYYxNTQaP4Qb8FIhbNKSsjL8nivzwBlkIuzRU88IxwhcUKB+n59J/tKrOhTrnq2wJJdeU+RI42GNu7N6026eMP76BcQWP35E2nQG4v+CheFsR/puR8j9X/fp48oe5Iyhmj7UpHkhj3whVrqLEyArQRlYDSRo9sIO+uPCMZ9HsQabH9g58xAvEppE2CS2xRP2VNTpgj9uSJNyTpopfFtJNoz+MWEl+hXWRyIq7gLhJkMTKOVxYH/w41lnMjmTy7EB+XHKuIB6CvEx5OajFuxtZBCZ7AFtFYNAezbDOnH1qJb+T0jNcZY3Bio+0pBzqqkcbnSTbFLeHVPn4VLzCN5WSdxBFZIcmR1ccnavD9fhS5u7KSDrudZOOkIOckmgUXL2oq0ooWP/I3aG+tscuIKl9yidoesdgTKG/Kmy82jr3U5Z+MNRlJ5WKutxSt5R3X8AE7QYxe/7mUs2PMSLBTWo24aPsVk2iGN7bqryzYxmHzOW+e+DJzIf770U0gzE7xxfOrnT4K+omOLLm3scFqA9cpnOuLq0WF97hlo3dKiYiVUBM39EY9R9Qwb2BfY+8VFM8sBjjltlf/jQKehDNC2J/tuKMQKz0v5ea491F8jBz9PQijIyNNyWT1lab4e+cUJatOmz39IHEE2kLutTyoBQrPy1lI1NvPsB4e6LisaCSgaM2sysPN7xpdZSZTtmNELmX0O0YuQWTwU+lWPA/jSw9pJQ16ixJvyL3Jp254rd76k300EFAef3Ld7CU81VmSZeUN4/K1qJnNuse5/3u1HdFAJu9zxxm1xyNnIooyr6Fh+Sbt/neVgvma9eQevY0Oa6mLlVG4WFGlOSxXq+XxY5/YmfFZpIyQb10eQO4u8EdZH9mydTQWW4Q4TDPTsV5QdtzlUz56Iu6jTNCsYoxHI8nC8G2fhpGxXZODeNrvXngXj6fiZ+4zIpJNvuZU8Lf5bd0viRUJo2d9n0VXnXSc8JxMbpp0t/Vn0xUFrPiXHvLi9UibN8R/oUmzdbVPuZ/Nav3bHNkreA70wrWU1/iZ0e3eoGIzYcm6l1W+J3bX9IZ3jLHV9f0NzR9uloa0V5NzdFasUaxk+eBug2Db+vLxk1fhNycUbZA5shKFNYiMXE3Xohr3zZ1OV1LMdJSlxovuxTv+45NWFSNK/Gql9UpGKLNfLTgaA9WrbZmPvEs66YLmbPUgf2RX8RGP8vaaq8282v+M+Zh3jSUHLa2ic2mwzODLTMV9jLNlkMp4b7+vvWi60DqWsFiXEFP6YXQQR4Tnc8N7umIiXnLSRoNIWtcScRvlrjqO48xNf6VznoaBjqEc9lxnTRetodZPRlkT+BHfgc8nMGnS01VrT1XmdRYRWE9mroMV+ID8mqSnG1sNY2nFntTBxn7JMsObEjRSYmmElvQRLNVTEs3I6YmroTWEWYQtSZvG8ToVNGnaJz22MmdI9Ck3nTe6BedsmMtkuQ97H/V8fU/cRG/ONH+xIBjPrM4YlouvZN7zRWKeFrR5+rAs33fS+3OifBQ3nfh8HPFC76Tn7L/+doWD9D9nhD8T3wOMmW0LhHLdyvc+uPYkHj4wRjtT6W2qH8qMP+qJxRPvzYkQtbzhcN3lPN/BQAlq1RXRrjBtL5fj8r/sX7i48BtCD8Aqxc9KnIThKMIWOofpMcXV5uxQmUQCWi1i8ng3Hqv2xrbCvj4MWcApgK+AnJpj+gUQUmANPjV45At/HF6mS2wBw350+fkp8mawOjHE6GlssbETPTwu8kUmakTbzgHZ+GBDg5YdIiIEQQRmRt0/6iLPq6IxY6TxSZ4dju6/QjAnoTt9ezh0OedJuDTsB9foYK1UNN7Gj/kDQSn7yZbQtV2gQQzNjFJTH5ZQl1AK6ZY9hLvEaVApIyQ065++45brFN2gYZTSIKlp8WdWpEk5dM1eRI5ESsyiQyOlQoyWGjc81atAcmIQILAya2AF4IYdCcPD7wwgmneQvPKWVggjHLpI9Y2MNaXMo6CmZp3oYCfTD2uKC1yxuSRQOps9q6ZolosHb6Yh/TDqE7oivWHvIAsXHxyiD9Acba0igdMe/umoHfDFk2p/Y3U/N4bPKdnzn/5iW7+UIguLxIptxp8nVLx1Q3dJ9wE2fs4nybWHVo5ZSin6YXQRaGRhmajFeBCUwWy8HJsw7qT4qWFAtBWFNg4OdQCr0sd6769DZSsF1kAXmNRg+fJJvbWtQyUBnU7BpzQ+apSx8kOYHhS5U0YAOMVnqQsOGkZGJw5D5qeMc/i+bgqfBdf+fBkl7CdIU5jmm6xmnVETwpYvzLzgqi9nSmfdKRJBl6paLR2h79cd7uPBxKiI8urizCt5YmS2xm/G/W/1ykD8bpeZvlU+vyeol2Q06eMXO1OsdmR5tZflkkUQImcWZ7RTDi76019c/f0rOSyRGAfksqWf7qJLLltcqomxYU06qXrRaMl5T36UtRCDw39Pcsh1V1k7RN8cdWZY0uTVTDfj5n1hANVCZF0kcix0n4vQbxCFW8fwjpMaZMp4DaX6RRyoHyrsh/oMf/tbM9vtjjO140HtvD4HuO8Vxk8LvNrwmn7h/5ry2nUZevoDGvc+tZmsJTPtPJXZCXKp61rJYna2VHojCboBlul0WhlwGStB/UocZaXQ4F6Lw1FWa3RkcffCUValYdywKurLDMutHDZXcd+Vaf1W/FYHf13LlDZFtmnBMy9r4ZtrZVuNnev+ogrbGQfZPejZkX7jXhV8mYxdlLwx2+nP+ytRWMou1BSsGAWmzKnZsJQLWr0pickXpw5yberZ+teuU9oXyX62Jf8vtZduifFBU9oKyXfQc19Ewu6LgNN9/GHqsIdjV/PxbPZYhIzHKob5/dyl9x+utNzdpRGlZ7MtYvbutqSQvU1wlG21Ln53WIbxmtvGtuxS3vBRCon1SdgnNlgfpetk1vOPot3q67/8z6zc8B2ytYzb+jhdJ5Me9knO8Y9xhR0S6aTf94vWkqqozeogMRbXpDEemSZF6zD7ceYckGjMC833iTGLBw98+cWYvdzOf2LsYPCvS7a0/f97eryl28WTNQRajYT6fuiQNCqQ2CBrVVCghrhylnSiUXS8kKu3GiQVdMoN7JiEztugG72odM6UTFQtM1uljoesEvcuFqtyqFwbIIdl7J2z8qcdZrIrYFqHVUh2ljwzGq/erUJFUudQ6+5DBxo1dFCZtHmh9XL01QjEPA+88+Wy1x1h4Z8MtODRy6+5A1597aRlHsj5OrQSCBodaUFLuCzJbbXZhsd11pLIJmghE6uy1NoxJPVemrVkHOwym6QgywZ8JrNSGLaphky/MOQV6l+ruNiJ6UjKC8eMiMjMLI/ymSUp4jaKc/F0ueWdIYgFLamxpFa4nSQ6YSwqghmBkR1hjmeaNGYMsgnaSgsdrUxkRVobtA1tVUbTAT270UFnOJD2DMX/6ch0db17jzJdvk0WZQBr55d3GsYv89NkVJkxyObcS8tOK/OWHWlt7HI5bQ3mH+mAccvddDCmLI/TnqmbtenIavnqy51GWbX3qfmVyizAYv5hN7SX0VW7S5kfNhbFf37BElxmksM7VPGM7gfX5KiA47woZ7P8Ckt0wWL+ex3aDuoFN9x7HdvBjLwnKML/vzsl1uei3iZ8NfsijdgidBUDV6JdJadhOpZEnv7d8/4jDMuItAYgSOQXHp6fJ5kFChN3HdCQ45GGDx5urxMmZCKPdskWPGUg+QKOWHfyRB5Q1a/wzjDY0+bpd4FWXCaQoAbgBPF4XXK3wO6kxOKoCKGg4XTAKgUgcpSugFc+xJe92srlvd2ACoBFGhgcmoikwESUDpHU3KIZvxQXFaopBvVloO5LDKmttZ0NpLXkI621PL2o0sARsjS0l7y8RCIJ2ZTPKtaQmIrkpGjXHmVLAU69B6VqBVfOipggAZJp1bXHphEbjYeqfitoC9KrpgxdZOgU4JlWvGgGT7IduVvCgk7oKghIIRQF7PRUBvmlQJYEzLkCXREUFpJSduodpb4puLVHwvbc8c+PWEpJGTCzKbdpQ+Lp2/+3DjxqTSzEgNRcezYbBR5Fit/3xy8MCWqZB6jWsYTg8MsHd9+XgGvEIYUXKIhM7bsHcsxM3nbz0r5GYFv4N06FGXVR0eV8jlkDY8Tt0RTfNmoIElIA6bQsA4FQ+3EaaM0hsCWV5rYht2mXCH6EDPqAh8E/A8FR9KjDPEeahkQgc+8FodHoFHVWguf9JaujcLzanWf7HDnQSP/RiSNGgJiA64uOPXl06Ny5BGBB6msfyT5y7y53aNX7Pbh1LcG8ewTi9eH73oEbt54U1nYt65vIoHk6p7WCuUZWtNxGjytPPzTKoEKYh6Y2wIua0U6VGyjf1T6G9nqMHOWKkz5zZa1P+khhGMKivTqsyucpZOBYRFC0IK2+QGuGefMKiAz1mLIf0X+UX/yxvcYEfNGnMk7W+RvarIOUoom+eC2oRsvqwRJHVvaDqLXaHsoPkkV5W4zwKCwGhauYnjqCUrcw0HYjg0jrSZkhQnimPXFiO/KUIoC9M7eEqTxc5+3toBMj3Qd7iLobdP9m8BzliCt5ziAH0ReYayzrof9xLaNgj+tzBHHjXt0HTk8TizrXcKqsZaHdJ5qHdoE0SrkPFA760NHg1o0r71pZc7PI7jOVozHRaPDU1tRDIpU1jDaT5yifSvntFnGCzOHI46SlOEISr5bHrs9CXghDEWQxt+QNEmPpKkxO/k8sQC9Lnq6V9SOWyACTzpzE9I4CWjWmu2hV+SWpRI0UpZEf0Z2t/lm2ub5B+3x+wfr4KG5x/dO/sXi/BAAAAA==") format("woff2"); /* TODO: replace with real font */
-    font-display: swap;
-  }
-  :root{
-    --key-w:64px; --key-h:220px; --black-w:38px; --black-h:132px;
-    --c64-bg:#403075;
-    --c64-fg:#80ff80;
-    --c64-accent:#d9a7ff;
-    --c64-border:#241a46;
-    --c64-panel:#44327f;
-    --c64-text: var(--c64-fg);
-    --glow:#88a4ff;
-  }
-  *{box-sizing:border-box}
-        html,body{min-height:100vh}
-        body{
-    margin:0;
-    background: var(--c64-bg);
-    color: var(--c64-fg);
-    letter-spacing:0.02em;
-    font-size:15px; line-height:1.3;
-    font-family: "C64 Pro Mono", monospace;
-          display:grid;
-          place-items:center;
-          overflow-x:hidden;
-          overflow-y:auto;
-        }
-  /* Scanlines overlay */
-  body::before{
-    content:"";
-    position:fixed; inset:0;
-    pointer-events:none;
-    background: repeating-linear-gradient(
-      to bottom,
-      rgba(0,0,0,0.12) 0px,
-      rgba(0,0,0,0.12) 1px,
-      rgba(0,0,0,0.00) 2px,
-      rgba(0,0,0,0.00) 3px
-    );
-    mix-blend-mode:multiply;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>C64 Piano</title>
+  <style>
+    @font-face {
+      font-family: 'C64 Pro Mono';
+      src: url('fonts/C64_Pro_Mono-STYLE.woff2') format('woff2'),
+           url('fonts/C64_Pro_Mono-STYLE.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'C64 Pro';
+      src: url('fonts/C64_Pro-STYLE.woff2') format('woff2'),
+           url('fonts/C64_Pro-STYLE.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+  </style>
+  <style id="c64-layout-v27">
+  :root{--c64-bg:#150d27;--c64-panel:#201538;--c64-panel-2:#281a46;--c64-text:#7dff74;--c64-dim:#4bbd54;--c64-accent:#80ffea;--c64-warning:#ffeb3b;--shadow:rgba(0,0,0,.3);--radius:14px;--gap:10px;--pad:10px}
+  *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:radial-gradient(1100px 520px at 18% -6%,#2a1a51 0%,#160d2c 50%,#0f071e 100%),var(--c64-bg);color:var(--c64-text);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Cascadia Mono","Segoe UI Mono","Roboto Mono","Oxygen Mono","Ubuntu Monospace","Source Code Pro",Consolas,"Fira Mono","Droid Sans Mono",Courier,monospace;letter-spacing:.3px;font-size:14px}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.10;background-image:linear-gradient(rgba(0,0,0,.18) 1px,transparent 1px);background-size:100% 2px}
+  .wrap{max-width:1260px;margin:14px auto;padding:0 12px 18px;display:grid;gap:var(--gap);grid-template-rows:auto 1fr}
+  .panel{background:linear-gradient(180deg,var(--c64-panel),var(--c64-panel-2));border-radius:var(--radius);padding:var(--pad);box-shadow:0 10px 20px var(--shadow)}
+  .btn{border:1px solid #3e2b6e;background:#120a26;color:var(--c64-text);padding:6px 8px;border-radius:10px;cursor:pointer}.btn.tiny{padding:4px 6px;font-size:12px}.btn.primary{border-color:var(--c64-accent);box-shadow:0 0 0 2px rgba(128,255,234,.12) inset}
+  .select,.range,.input{appearance:none;background:#100724;border:1px solid #3e2b6e;color:var(--c64-text);padding:6px 8px;border-radius:8px}
+  .kbadge{font-size:12px;color:var(--c64-dim)}
 
-  /* Background oscilloscopes */
-  #oscWrap{position:fixed; inset:0; display:flex; flex-direction:column; z-index:0; pointer-events:none;}
-#oscWrap canvas{flex:1; width:100%; opacity:0.2;}
+  /* Topbar */
+  .topbar{display:grid;align-items:center;gap:var(--gap);grid-template-columns:280px 1fr auto}
+  .transport{display:flex;gap:6px;align-items:center}.lamp{width:9px;height:9px;border-radius:50%;background:#1a2630;box-shadow:0 0 0 2px #09121a inset}.lamp.on{background:var(--c64-accent);box-shadow:0 0 10px var(--c64-accent)}
+  h1{margin:0;font-size:16px;font-weight:900;letter-spacing:1.5px;text-shadow:0 0 6px #49ff60}
+  .options{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
-.row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
-  .row label{font-size:12px; display:flex; gap:6px; align-items:center}
-  .title{font-weight:800; margin:0 0 10px 0; font-size:15px; letter-spacing:0.6px; text-shadow:0 1px 0 rgba(0,0,0,0.35)}
+  /* Main grid */
+  .main{display:grid;gap:var(--gap);grid-template-columns:300px minmax(560px,1fr) 420px;grid-template-rows:auto 1fr auto;grid-template-areas:"left keyboard voices" "left track voices" "drums drums voices"}
 
-  .pill{padding:4px 10px; border-radius:999px; background:rgba(169,187,255,0.15); border:1px solid var(--c64-border); font-size:12px}
-  .pill.glow{box-shadow:0 0 0 2px var(--glow) inset}
+  /* Left column */
+  .left{grid-area:left;display:grid;gap:var(--gap)}
+  .card{background:#140a29;border:1px solid #3e2b6e;border-radius:12px;padding:8px}
+  .card h3{margin:.1rem 0 .4rem;font-size:13px;color:var(--c64-accent);letter-spacing:1px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}
+  .scope{height:82px;border:1px solid #3e2b6e;border-radius:12px;background:linear-gradient(180deg,#0e0920,#120d26);display:flex;align-items:center;justify-content:center;color:var(--c64-dim);font-size:12px}
+  .chiprow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 
-  .c64-window {
-    width: min(980px, 96vw);
-    border: 4px solid var(--c64-border);
-    box-shadow: 0 0 0 2px #000 inset, 0 0 32px rgba(0,0,0,0.45);
-    padding: 16px 18px 20px;
-    background: linear-gradient(180deg, #44327f 0%, #3a2b6d 100%);
-    border-radius: 8px;
-  }
-  .c64-title {
-    text-align: center;
-    font-size: 24px;
-    margin: 4px 0 12px;
-    text-shadow: 0 0 6px rgba(128,255,128,0.8), 0 0 14px rgba(128,255,128,0.5);
-  }
-  .c64-btn {
-    background: #201050;
-    color: var(--c64-fg);
-    border: 2px solid var(--c64-border);
-    padding: 8px 12px;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    border-radius: 6px;
-  }
-  .c64-btn:hover { outline: 2px solid var(--c64-accent); }
-  .c64-btn:active { transform: translateY(1px); }
-  .c64-seg {
-    display: inline-flex; border: 2px solid var(--c64-border);
-    border-radius: 6px; overflow: hidden;
-  }
-  .c64-seg button {
-    background: #201050; color: var(--c64-fg);
-    padding: 8px 10px; border: 0; cursor: pointer; min-width: 64px;
-  }
-  .c64-seg button.active { background: var(--c64-fg); color: #201050; }
-  .c64-seg button svg{width:20px; height:16px; stroke:var(--c64-fg); fill:none; stroke-width:2}
-  .block {
-    margin-top: 14px; padding: 10px 12px;
-    border: 2px dashed var(--c64-border);
-    background: rgba(0,0,0,0.15);
-    border-radius: 6px;
-    line-height: 1.5;
-  }
-  .note { margin-top: 10px; opacity: 0.85; font-size: 12px; }
+  /* Center */
+  .keyboard{grid-area:keyboard}
+  .piano{height:140px;position:relative;background:#0e0920;border:1px solid #3e2b6e;border-radius:12px;overflow:hidden}
+  .key-white{position:absolute;bottom:0;width:12.5%;height:100%;background:linear-gradient(#e8e8e8,#cacaca);border-right:1px solid #aaa}
+  .key-black{position:absolute;bottom:0;width:7%;height:58%;background:linear-gradient(#111,#222);border:1px solid #000;border-radius:0 0 5px 5px;z-index:2}
+  .labels{position:absolute;bottom:6px;left:8px;font-size:11px;color:#000}.kbd{color:var(--c64-warning)}
+  .track{grid-area:track}
+  .tabbar{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+  .tab{border:1px solid #3e2b6e;background:#120a26;color:var(--c64-text);padding:4px 8px;border-radius:999px;font-size:12px;cursor:pointer}
+  .tab.active{border-color:var(--c64-accent);box-shadow:0 0 0 2px rgba(128,255,234,.12) inset}
+  .grid-placeholder{height:170px;border:1px dashed #3e2b6e;border-radius:10px;background:repeating-linear-gradient(90deg,#1b1035 0 10px,#170d2b 10px 20px);display:flex;align-items:center;justify-content:center;color:var(--c64-dim);font-size:12px}
 
-  /* Range inputs */
-  input[type=range]{accent-color: var(--c64-accent)}
+  /* Drums */
+  .drums{grid-area:drums}.dr-top{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .drum-grid{display:grid;gap:8px}
+  .dr-row{display:grid;grid-template-columns:70px repeat(16,1fr);gap:6px;align-items:center}
+  .dr-label{font-size:12px;color:var(--c64-dim);text-align:right;padding-right:6px}
+  .step{height:22px;border-radius:7px;border:1px solid #3e2b6e;background:#100724}
 
-  /* Mini canvases */
-  .miniWrap{display:flex; gap:12px; align-items:center}
-  canvas.mini{background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(255,255,255,0.05)); border:2px solid var(--c64-border); border-radius:8px; backdrop-filter: blur(1px); box-shadow:0 4px 14px rgba(0,0,0,0.25)}
+  /* Right column: tall pair */
+  .voices{grid-area:voices;display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-auto-rows:1fr;align-items:stretch}
+  .voice{background:#140a29;border:1px solid #3e2b6e;border-radius:12px;padding:8px;display:flex;flex-direction:column}
+  .voice-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .pill{border:1px solid #3e2b6e;border-radius:999px;padding:2px 8px;font-size:12px;color:var(--c64-accent)}
+  .trk{display:grid;grid-template-columns:1fr;gap:2px;flex:1 1 auto;min-height:0;border-radius:8px;background:#0f0a22;padding:6px;border:1px solid #3e2b6e;overflow:auto}
+  .note{height:18px;display:flex;align-items:center;justify-content:center;font-size:12px;border:1px solid #33215f;border-radius:6px;background:#120a26}.note.dim{opacity:.5}
+  .voices-bar{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center}
 
-  .kbdWrap{display:flex; gap:14px; align-items:flex-start}
-  .kbd{position:relative; display:flex; gap:2px; padding:12px; border:2px solid var(--c64-border); border-radius:12px; background:linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.06)); box-shadow:0 10px 30px rgba(0,0,0,.25) inset}
-  .white{position:relative; width:var(--key-w); height:var(--key-h); background:linear-gradient(#ffffff,#eef2f6); border:1px solid #cbd2da; border-bottom-width:4px; border-radius:0 0 10px 10px; display:flex; align-items:center; justify-content:center; font-size:12px; user-select:none; cursor:pointer; z-index:1; color:#111; transition:transform .03s ease, filter .15s ease}
-  .white:hover{filter:brightness(1.04)}
-  .white:active{transform:translateY(1px)}
-  .white.active{background:#e7f0ff; border-color:#8db9ff}
-  .black{position:absolute; top:10px; width:var(--black-w); height:var(--black-h); background:linear-gradient(#222,#050505); border:1px solid #000; border-bottom-width:4px; border-radius:0 0 8px 8px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; user-select:none; cursor:pointer; z-index:3; box-shadow:0 10px 18px rgba(0,0,0,0.35); transition:transform .03s ease, filter .15s ease}
-  .black:hover{filter:brightness(1.1)}
-  .black:active{transform:translateY(1px)}
-  .black.active{background:#333}
-  .kLabel{position:absolute; bottom:10px; font-size:12px; color:#333}
-  .hint{position:absolute; top:6px; left:6px; font-size:10px; color:#eee; background:#222; border:1px solid #333; padding:1px 5px; border-radius:6px; pointer-events:none}
-  .white .hint{color:#555; background:#eef2f7; border-color:#d9dee5}
-
-  .key { background: #f7f7f7; border-color: #000; }
-  .key.black { background: #101010; }
-  .key.active { background: #ff8080 !important; }
-
-  /* History panel */
-  .history{min-width:260px; max-width:340px; height:calc(var(--key-h) + 24px); border:2px solid var(--c64-border); border-radius:12px; padding:10px; background:linear-gradient(180deg, rgba(0,0,0,0.08), rgba(255,255,255,0.04)); display:flex; flex-direction:column; box-shadow:0 10px 24px rgba(0,0,0,0.25) inset}
-  .historyHeader{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
-  .historyTitle{font-size:13px; font-weight:800}
-  .histList{flex:1; overflow:auto; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px; padding:6px}
-  .histRow{display:grid; grid-template-columns:64px 1fr 64px; gap:6px; font-size:12px; padding:4px 6px; border-bottom:1px dotted rgba(169,187,255,0.5)}
-  .histRow:last-child{border-bottom:none}
-
-/* Boot overlay */
-#bootOverlay{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-fg); display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace;}
-#bootOverlay::before{content:""; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 3px); mix-blend-mode:multiply; opacity:.35;}
-#bootPanel{background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel); border:2px solid var(--c64-border); padding:20px; max-width:600px; width:90%; box-shadow:0 0 0 1px rgba(255,255,255,0.06) inset;}
-#bootText{min-height:150px; white-space:pre-wrap; font-size:14px; line-height:1.4;}
-#bootCursor{display:inline-block; width:8px; height:1em; background:var(--c64-fg); margin-left:2px; animation:blink 1s steps(1) infinite;}
-@keyframes blink{50%{opacity:0;}}
-#bootOverlay.fade{opacity:0; transition:opacity .4s ease; pointer-events:none;}
-.bootControls{margin-top:14px; display:flex; flex-direction:column; gap:8px; align-items:flex-start;}
-
-  /* Drum machine */
-  .drums{display:grid; grid-template-columns:180px repeat(16,1fr); gap:8px; align-items:center}
-  .drums .hdr{font-size:12px; color:var(--c64-text); text-align:center}
-  .rowLbl{display:flex; gap:8px; align-items:center}
-  .rowLbl .keytag{font-size:11px; background:#111; color:#fff; border-radius:6px; padding:2px 6px; box-shadow:0 1px 0 rgba(255,255,255,0.06) inset}
-  .step{width:28px; height:28px; border:1px solid var(--c64-border); border-radius:8px; background:linear-gradient(180deg, rgba(169,187,255,0.2), rgba(20,30,90,0.25)); display:grid; place-items:center; cursor:pointer; transition:filter .15s ease, transform .05s ease}
-  .step:hover{filter:brightness(1.1)}
-  .step:active{transform:translateY(1px)}
-  .step.on{background:linear-gradient(180deg, rgba(169,187,255,0.45), rgba(20,30,90,0.35))}
-  .colHdr{font-size:10px; color:#cfd7ff; text-align:center}
-  .playing{box-shadow:0 0 0 2px #222 inset, 0 0 12px var(--glow)}
-  .transport{display:flex; gap:10px; align-items:center; margin-top:10px}
-
-  /* Responsive tweaks */
-  @media (max-width: 980px){ :root{ --key-w:54px; --key-h:200px; } .drums{grid-template-columns:140px repeat(16,1fr)} }
-  @media (max-width: 760px){ :root{ --key-w:46px; --key-h:180px; --black-w:32px; --black-h:116px; } .drums{grid-template-columns:110px repeat(16,1fr)} }
-  @media (max-width: 560px){ :root{ --key-w:40px; --key-h:160px; --black-w:28px; --black-h:100px; } }
-</style>
+  @media (max-width:1180px){.main{grid-template-columns:1fr;grid-template-areas:"keyboard" "voices" "left" "track" "drums"}.voices{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
-<div id="bootOverlay">
-  <div id="bootPanel">
-    <div id="bootText"><span id="bootCursor"></span></div>
-    <div class="bootControls">
-      <button id="bootStart" class="c64-btn">Enable Sound & Start</button>
-      <label><input type="checkbox" id="bootSkip"> Skip intro next time</label>
+<div class="wrap">
+  <!-- Topbar -->
+  <section class="topbar panel">
+    <h1>C64 PIANO / TRACKER</h1>
+    <div class="options">
+      <label class="kbadge">Backend</label>
+      <select class="select" id="backendSelect"><option selected>JS</option><option>WASM</option><option>MIDI</option></select>
+      <label class="kbadge">Track Length</label>
+      <select class="select" id="globalLen"><option>16</option><option selected>32</option><option>64</option></select>
+      <label class="kbadge">Quantize</label>
+      <select class="select" id="quantize"><option>Off</option><option>1/8</option><option selected>1/16</option><option>1/32</option></select>
+      <button class="btn tiny" id="projectLoad">Load</button>
+      <button class="btn tiny" id="projectSave">Save</button>
+      <button class="btn tiny" id="projectSaveAs">Save As…</button>
     </div>
-  </div>
-</div>
-<div id="oscWrap"></div>
+    <div class="transport"><span class="lamp on" id="statusLamp"></span><button class="btn tiny">PLAY</button><button class="btn tiny">STOP</button></div>
+  </section>
 
-<div class="c64-window">
-  <div class="c64-title">C64 PIANO / TRACKER</div>
-  <div class="block">
-  <div class="title">C64 Piano — Controls</div>
-  <!-- Engine toggle -->
-  <div class="row">
-    <div class="c64-seg" id="engineBtns" title="Select synth engine">
-      <button class="segBtn active" data-eng="js" aria-pressed="true">JS</button>
-      <button class="segBtn" data-eng="wasm">WASM</button>
-    </div>
-  </div>
-
-  <!-- Waveform controls: buttons + presets + visual -->
-  <div class="row">
-    <div class="c64-seg" id="waveBtns" title="Select waveform">
-      <button class="segBtn active" data-wave="pulse" aria-pressed="true" title="Pulse (square)">
-        <svg viewBox="0 0 40 20"><path d="M1 10 H10 V2 H22 V18 H34 V10 H39"/></svg> Pulse
-      </button>
-      <button class="segBtn" data-wave="sawtooth" title="Sawtooth">
-        <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Saw
-      </button>
-      <button class="segBtn" data-wave="triangle" title="Triangle">
-        <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Tri
-      </button>
-      <button class="segBtn" data-wave="noise" title="Noise">
-        <svg viewBox="0 0 40 20"><path d="M1 10 L5 6 L9 14 L13 8 L17 12 L21 5 L25 15 L29 7 L33 11 L37 4"/></svg> Noise
-      </button>
-    </div>
-    <label title="Wave-specific preset">
-      Preset
-      <select id="wavePreset"></select>
-    </label>
-    <div class="miniWrap">
-      <canvas id="waveVis" class="mini" width="300" height="80" title="Waveform view"></canvas>
-    </div>
-  </div>
-
-  <!-- Mod + vibrato + octave -->
-  <div class="row">
-    <label title="Pulse width (duty cycle). 0.5 = classic square.">P.W. <input id="sidPW" type="range" min="0.05" max="0.95" step="0.01" value="0.5"></label>
-    <label title="Pulse width modulation rate in Hz.">PWM Rate <input id="sidPWMRate" type="range" min="0" max="12" step="0.1" value="3"></label>
-    <label title="Pulse width modulation depth.">PWM Depth <input id="sidPWMDepth" type="range" min="0" max="0.45" step="0.01" value="0.25"></label>
-    <label title="Vibrato speed in Hz.">Vibrato Hz <input id="vibRate" type="range" min="0" max="12" step="0.1" value="5"></label>
-    <label title="Vibrato depth in cents (100 = 1 semitone).">Vibrato Amt <input id="vibAmt" type="range" min="0" max="50" step="1" value="8"></label>
-    <span class="pill" id="octPill" title=", lowers octave, . raises octave">Octave: <span id="octDisp">0</span>  &nbsp; (&lt; / &gt;)</span>
-    <button class="c64-btn" id="octDown" title="Octave down (,)">−</button>
-    <button class="c64-btn" id="octUp" title="Octave up (.)">＋</button>
-  </div>
-
-  <!-- ADSR + presets + visual -->
-  <div class="row">
-    <label title="Attack time (ms).">A <input id="sidA" type="range" min="0" max="200" step="1" value="8"></label>
-    <label title="Decay time (ms).">D <input id="sidD" type="range" min="0" max="600" step="5" value="120"></label>
-    <label title="Sustain level (0–1).">S <input id="sidS" type="range" min="0" max="1" step="0.01" value="0.5"></label>
-    <label title="Release time (ms).">R <input id="sidR" type="range" min="0" max="1200" step="10" value="240"></label>
-    <label title="ADSR preset">
-      ADSR Preset
-      <select id="adsrPreset"></select>
-    </label>
-    <div class="miniWrap">
-      <canvas id="adsrVis" class="mini" width="260" height="80" title="ADSR envelope"></canvas>
-    </div>
-  </div>
-
-  <!-- Arp + Filter buttons + presets + visual -->
-  <div class="row">
-    <label title="Chord-like fast note cycling.">Arp
-      <select id="arp" title="Arpeggiator pattern">
-        <option value="off" selected>Off</option>
-        <option value="maj">Maj (0,4,7)</option>
-        <option value="min">Min (0,3,7)</option>
-        <option value="pwr">Power (0,7,12)</option>
-      </select>
-    </label>
-    <label title="Arpeggiator rate (steps per second).">Arp Rate <input id="arpRate" type="range" min="4" max="24" step="1" value="12"></label>
-
-    <div class="c64-seg" id="filterBtns" title="Filter type">
-      <button class="segBtn active" data-filter="lowpass" title="Low‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C12 6, 18 4, 39 4"/></svg> LP
-      </button>
-      <button class="segBtn" data-filter="bandpass" title="Band‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C10 18, 15 4, 20 4 C25 4, 30 18, 39 18"/></svg> BP
-      </button>
-      <button class="segBtn" data-filter="highpass" title="High‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C12 18, 18 16, 39 4"/></svg> HP
-      </button>
-      <button class="segBtn" data-filter="off" title="No filter">
-        <svg viewBox="0 0 40 20"><path d="M1 10 H39"/><path d="M4 2 L36 18"/></svg> Off
-      </button>
-    </div>
-    <label title="Filter preset">
-      Filter Preset
-      <select id="filterPreset"></select>
-    </label>
-    <label title="Filter cutoff frequency.">Cutoff <input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
-    <label title="Filter resonance (Q).">Res (Q) <input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
-    <label title="Adds 8‑bit style grit using a waveshaper.">Bit‑crush <input id="crush" type="checkbox" checked></label>
-    <label title="Master output volume.">Volume <input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
-    <div class="miniWrap">
-      <canvas id="filterVis" class="mini" width="300" height="80" title="Filter magnitude"></canvas>
-    </div>
-  </div>
-
-  <div class="note">Keys: A S D F G H J K (white) and W E T Y U (black). Octave with , and . (display shows &lt; / &gt;).</div>
-  </div>
-
-  <div class="block">
-  <div class="title">C64 Piano — Keyboard</div>
-  <div class="kbdWrap">
-    <div class="kbd" id="kbd">
-      <div class="key white" data-note="C" data-key="A"><span class="kLabel">C</span><span class="hint" title="Press A">A</span></div>
-      <div class="key white" data-note="D" data-key="S"><span class="kLabel">D</span><span class="hint" title="Press S">S</span></div>
-      <div class="key white" data-note="E" data-key="D"><span class="kLabel">E</span><span class="hint" title="Press D">D</span></div>
-      <div class="key white" data-note="F" data-key="F"><span class="kLabel">F</span><span class="hint" title="Press F">F</span></div>
-      <div class="key white" data-note="G" data-key="G"><span class="kLabel">G</span><span class="hint" title="Press G">G</span></div>
-      <div class="key white" data-note="A" data-key="H"><span class="kLabel">A</span><span class="hint" title="Press H">H</span></div>
-      <div class="key white" data-note="B" data-key="J"><span class="kLabel">B</span><span class="hint" title="Press J">J</span></div>
-      <div class="key white" data-note="C2" data-key="K"><span class="kLabel">C</span><span class="hint" title="Press K">K</span></div>
-      <div class="key black" data-note="C#" data-key="W" style="left:calc(var(--key-w) - var(--black-w)/2)"><span class="hint" title="Press W">W</span></div>
-      <div class="key black" data-note="D#" data-key="E" style="left:calc(var(--key-w)*2 - var(--black-w)/2)"><span class="hint" title="Press E">E</span></div>
-      <div class="key black" data-note="F#" data-key="T" style="left:calc(var(--key-w)*4 - var(--black-w)/2)"><span class="hint" title="Press T">T</span></div>
-      <div class="key black" data-note="G#" data-key="Y" style="left:calc(var(--key-w)*5 - var(--black-w)/2)"><span class="hint" title="Press Y">Y</span></div>
-      <div class="key black" data-note="A#" data-key="U" style="left:calc(var(--key-w)*6 - var(--black-w)/2)"><span class="hint" title="Press U">U</span></div>
-    </div>
-
-    <div class="history">
-      <div class="historyHeader">
-        <div class="historyTitle">Pattern Editor</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
-          <span class="pill" id="voiceDisp">1</span>
-          <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
-          <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
-          <label style="display:flex;align-items:center;gap:4px">Track
-            <select id="patternSel"></select>
-          </label>
-          <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
-          <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
-          <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
-          <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
-          <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
-        </div>
+  <section class="main">
+    <!-- LEFT -->
+    <aside class="left">
+      <div class="card">
+        <h3>Oscillator</h3>
+        <div class="chiprow" style="margin-bottom:6px"><button class="btn tiny primary">Pulse</button><button class="btn tiny">Saw</button><button class="btn tiny">Tri</button><button class="btn tiny">Noise</button></div>
+        <div class="scope">Waveform / PWM</div>
+        <div class="row" style="margin-top:6px"><label>P.W.</label><input class="range" type="range"><label>PWM Rate</label><input class="range" type="range"></div>
       </div>
-      <div class="histList" id="histList" aria-live="polite"></div>
-    </div>
-  </div>
-</div>
+      <div class="card"><h3>ADSR</h3><div class="scope">Envelope</div><div class="row" style="margin-top:6px"><label>A</label><input class="range" type="range"><label>D</label><input class="range" type="range"><label>S</label><input class="range" type="range"><label>R</label><input class="range" type="range"></div></div>
+      <div class="card"><h3>Filter</h3><div class="scope">Filter Response</div><div class="row" style="grid-template-columns:repeat(4,1fr);margin-top:6px"><button class="btn tiny">LP</button><button class="btn tiny">BP</button><button class="btn tiny">HP</button><button class="btn tiny">Off</button></div><div class="row" style="margin-top:6px"><label>Cutoff</label><input class="range" type="range"><label>Res Q</label><input class="range" type="range"></div></div>
+      <div class="card"><h3>Arpeggiator</h3><div class="chiprow" style="grid-template-columns:repeat(5,1fr)"><button class="btn tiny primary">Off</button><button class="btn tiny">Up</button><button class="btn tiny">Down</button><button class="btn tiny">Up/Down</button><button class="btn tiny">Random</button></div><div class="row" style="margin-top:6px"><label>Rate</label><input class="range" type="range"><label>Gate</label><input class="range" type="range"></div></div>
+    </aside>
 
-  <div class="block">
-  <div class="title">C64‑style Drum Machine</div>
-  <div class="drums" id="drums"></div>
-  <div class="transport">
-    <button class="c64-btn" id="playBtn" title="Start the 16‑step sequencer">Play</button>
-    <button class="c64-btn" id="stopBtn" title="Stop and clear the playhead highlight">Stop</button>
-    <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
-    <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
-  </div>
-</div>
+    <!-- CENTER -->
+    <section class="keyboard panel"><h3 style="margin:0 0 6px;color:var(--c64-accent);font-size:13px">Keyboard</h3><div class="piano"><div class="key-white" style="left:0%"></div><div class="key-white" style="left:12.5%"></div><div class="key-white" style="left:25%"></div><div class="key-white" style="left:37.5%"></div><div class="key-white" style="left:50%"></div><div class="key-white" style="left:62.5%"></div><div class="key-white" style="left:75%"></div><div class="key-white" style="left:87.5%"></div><div class="key-black" style="left:8.5%"></div><div class="key-black" style="left:21%"></div><div class="key-black" style="left:46%"></div><div class="key-black" style="left:58.5%"></div><div class="key-black" style="left:71%"></div><div class="labels">Keys: <span class="kbd">A S D F G H J K</span> + <span class="kbd">W E T Y U</span> — Octave: , .</div></div></section>
 
-</div>
+    <section class="track panel">
+      <div class="tabbar"><button class="tab active" data-tab="track">Track Editor</button><button class="tab" data-tab="fx">FX</button>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center"><span class="kbadge">Track</span><select class="select" id="trackSelect"><option>Track 1</option><option>Track 2</option><option>Track 3</option><option>New…</option></select><span class="kbadge">Len</span><select class="select" id="trackLen"><option>16</option><option selected>32</option><option>64</option></select></div>
+      </div>
+      <div id="tab-track" class="grid-placeholder">Grid / Steps / Notes (edits selected Track)</div>
+      <div id="tab-fx" class="panel" style="display:none;margin-top:6px;padding:8px">
+        <div class="options" style="margin-bottom:6px"><label class="kbadge">Instrument</label><select class="select" id="instrumentSelect"><option>Init</option><option>Pluck</option><option>Warm Pad</option></select><button class="btn tiny" id="instLoad">Load Instrument</button><button class="btn tiny" id="instSave">Save Instrument</button><button class="btn tiny" id="instSaveAs">Save As…</button></div>
+        <div class="grid-placeholder">FX cards (Delay / Chorus / Bit / Drive)</div>
+      </div>
+    </section>
 
+    <!-- RIGHT: one tall pair -->
+    <section class="voices"><div class="voice"><div class="voice-head"><strong>Voice 1</strong><span class="pill">CH1</span></div><div class="kbadge" style="margin-bottom:6px">Track: Track 1 • Len: 32</div><div class="trk" id="tracker1"><div class="note">C‑4</div><div class="note dim">—</div><div class="note">E‑4</div><div class="note dim">—</div><div class="note">G‑4</div><div class="note dim">—</div><div class="note">C‑5</div><div class="note dim">—</div></div></div>
+      <div class="voice"><div class="voice-head"><strong>Voice 2</strong><span class="pill">CH2</span></div><div class="kbadge" style="margin-bottom:6px">Track: Track 2 • Len: 32</div><div class="trk" id="tracker2"><div class="note dim">—</div><div class="note">C‑3</div><div class="note dim">—</div><div class="note">C‑3</div><div class="note dim">—</div><div class="note">C‑3</div></div></div>
+      <div class="voices-bar"><button class="btn tiny" id="addVoiceBtn">+ Add Voice</button><span class="kbadge">Trackers fill the full right column</span></div>
+    </section>
+
+    <!-- DRUMS -->
+    <section class="drums panel">
+      <div class="dr-top"><h3 style="margin:0;color:var(--c64-accent);font-size:13px">C64‑style Drum Machine</h3>
+        <div style="display:flex;gap:10px;align-items:center"><label class="kbadge">Voice</label><select class="select" id="drVoice"><option>CH1</option><option selected>CH3</option><option>CH2</option></select><label class="kbadge">Len</label><select class="select" id="drLen"><option>16</option><option selected>32</option><option>64</option></select></div>
+      </div>
+      <div class="drum-grid" id="drums">
+        <div class="dr-row"><div class="dr-label">Kick</div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div></div>
+        <div class="dr-row"><div class="dr-label">Snare</div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div></div>
+        <div class="dr-row"><div class="dr-label">Hat</div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div></div>
+        <div class="dr-row"><div class="dr-label">Tom</div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div><div class="step"></div></div>
+      </div>
+    </section>
+  </section>
+</div>
+<script id="c64-layout-v27-script">
+  (function(){
+    // Tabs (Track / FX)
+    const tabs = document.querySelectorAll('.tab');
+    const panels = { track: document.getElementById('tab-track'), fx: document.getElementById('tab-fx') };
+    tabs.forEach(t=>t.addEventListener('click', ()=>{
+      tabs.forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const k = t.dataset.tab; Object.keys(panels).forEach(p=>panels[p].style.display = p===k? 'block':'none');
+    }));
+
+    // Backend lamp (cosmetic)
+    const backend = document.getElementById('backendSelect');
+    const lamp = document.getElementById('statusLamp');
+    const colors = { JS:'#7dff74', WASM:'#80ffea', MIDI:'#ffeb3b' };
+    function paintLamp(){ lamp.style.background = colors[backend.value] || '#7dff74'; lamp.classList.add('on'); }
+    backend.addEventListener('change', paintLamp); paintLamp();
+
+    // Length mirrors (no audio changes, just labels)
+    const trackLen = document.getElementById('trackLen');
+    const trackers = [document.getElementById('tracker1'), document.getElementById('tracker2')];
+    function applyLen(len){ trackers.forEach(el=>el.setAttribute('data-len', len)); }
+    trackLen.addEventListener('change', ()=>applyLen(trackLen.value)); applyLen(trackLen.value);
+
+    // Drum len mirror
+    const drLen = document.getElementById('drLen');
+    drLen.addEventListener('change', ()=>{ /* TODO: resize drum steps visually if you implement dynamic DOM */ });
+
+    // Stub buttons (replace with real save/load)
+    document.getElementById('instLoad').onclick = ()=>alert('Load Instrument (stub)');
+    document.getElementById('instSave').onclick = ()=>alert('Save Instrument (stub)');
+    document.getElementById('instSaveAs').onclick = ()=>alert('Save As… (stub)');
+    document.getElementById('projectLoad').onclick = ()=>alert('Load Project (stub)');
+    document.getElementById('projectSave').onclick = ()=>alert('Save Project (stub)');
+    document.getElementById('projectSaveAs').onclick = ()=>alert('Save Project As… (stub)');
+    document.getElementById('addVoice').onclick = ()=>alert('Add Voice (stub)');
+  })();
+</script>
 <script>
 // === Audio setup ===
 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -595,15 +439,15 @@ function selectVoice(i){
 }
 
 
-const recordBtn = get('recordPatternBtn');
-const stopBtn = get('stopPatternBtn');
-const playBtn = get('playPatternBtn');
-const clearBtn = get('clearPatternBtn');
-const saveBtn = get('savePatternBtn');
-const patternSel = get('patternSel');
-const voiceDisp = get('voiceDisp');
-const prevVoiceBtn = get('voicePrev');
-const nextVoiceBtn = get('voiceNext');
+const recordBtn = get('recordPatternBtn') || {disabled:false, addEventListener:()=>{}};
+const stopBtn = get('stopPatternBtn') || {disabled:false, addEventListener:()=>{}};
+const playBtn = get('playPatternBtn') || {disabled:false, addEventListener:()=>{}};
+const clearBtn = get('clearPatternBtn') || {disabled:false, addEventListener:()=>{}};
+const saveBtn = get('savePatternBtn') || {disabled:false, addEventListener:()=>{}};
+const patternSel = get('patternSel') || {value:'', addEventListener:()=>{}};
+const voiceDisp = get('voiceDisp') || {textContent:''};
+const prevVoiceBtn = get('voicePrev') || {addEventListener:()=>{}};
+const nextVoiceBtn = get('voiceNext') || {addEventListener:()=>{}};
 
 // History state – used by pattern editor and note recording
 let history = [];                // {note, freq, oct, t0, t1, dur}
@@ -693,7 +537,7 @@ playBtn.addEventListener('click', playSelected);
 clearBtn.addEventListener('click', clearPattern);
 saveBtn.addEventListener('click', savePattern);
 patternSel.addEventListener('change', showPattern);
-get('addVoiceBtn').addEventListener('click', addVoice);
+const addVoiceBtn = get('addVoiceBtn'); if(addVoiceBtn) addVoiceBtn.addEventListener('click', addVoice);
 addVoice();
 
 function playPattern(v, pattern){
@@ -803,8 +647,8 @@ const baseFreq = { 'C':261.63,'C#':277.18,'D':293.66,'D#':311.13,'E':329.63,'F':
 let octave = 0; // -3..+3
 const octDisp = get('octDisp'); const octPill = get('octPill');
 function updateOct(n){ octave = Math.max(-3, Math.min(3, n)); if(octDisp) octDisp.textContent = octave; if(octPill){ octPill.classList.add('glow'); setTimeout(()=>octPill.classList.remove('glow'), 160); } }
-get('octDown').addEventListener('click', ()=>updateOct(octave-1));
-get('octUp').addEventListener('click', ()=>updateOct(octave+1));
+get('octDown')?.addEventListener('click', ()=>updateOct(octave-1));
+get('octUp')?.addEventListener('click', ()=>updateOct(octave+1));
 
 function freqFor(note){ return (typeof note === 'number') ? note : baseFreq[note] * Math.pow(2, octave); }
 
@@ -866,6 +710,7 @@ function setWaveButtons(type){
 
 function populateWavePresets(){
   const sel = get('wavePreset');
+  if(!sel) return;
   sel.innerHTML='';
   const list = wavePresets[state.wave] || { 'Init':{} };
   Object.keys(list).forEach(name=>{
@@ -875,7 +720,7 @@ function populateWavePresets(){
 }
 
 function applyWavePreset(){
-  const sel = get('wavePreset'); const p = (wavePresets[state.wave]||{})[sel.value]||{};
+  const sel = get('wavePreset'); if(!sel) return; const p = (wavePresets[state.wave]||{})[sel.value]||{};
   if(p.pw!=null) get('sidPW').value=p.pw;
   if(p.pwmRate!=null) get('sidPWMRate').value=p.pwmRate;
   if(p.pwmDepth!=null) get('sidPWMDepth').value=p.pwmDepth;
@@ -893,11 +738,11 @@ function setFilterButtons(type){
 }
 
 function populateFilterPresets(){
-  const sel=get('filterPreset'); sel.innerHTML='';
+  const sel=get('filterPreset'); if(!sel) return; sel.innerHTML='';
   Object.keys(filterPresets).forEach(name=>{ const o=document.createElement('option'); o.textContent=name; sel.appendChild(o); });
 }
 function applyFilterPreset(){
-  const sel=get('filterPreset'); const p=filterPresets[sel.value]; if(!p) return;
+  const sel=get('filterPreset'); if(!sel) return; const p=filterPresets[sel.value]; if(!p) return;
   state.filter = p.type;
   if(p.cutoff!=null) get('sidCutoff').value=p.cutoff;
   if(p.res!=null) get('sidRes').value=p.res;
@@ -952,11 +797,11 @@ function applyParams(p){
 }
 
 function populateADSRPresets(){
-  const sel=get('adsrPreset'); sel.innerHTML='';
+  const sel=get('adsrPreset'); if(!sel) return; sel.innerHTML='';
   Object.keys(adsrPresets).forEach(name=>{ const o=document.createElement('option'); o.textContent=name; sel.appendChild(o); });
 }
 function applyADSRPreset(){
-  const sel=get('adsrPreset'); const p=adsrPresets[sel.value]; if(!p) return;
+  const sel=get('adsrPreset'); if(!sel) return; const p=adsrPresets[sel.value]; if(!p) return;
   get('sidA').value=p.A; get('sidD').value=p.D; get('sidS').value=p.S; get('sidR').value=p.R;
   updateADSRVis();
 }
@@ -1122,7 +967,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>{ const key=e.key.toLowerCase(); const el=keyMap[key]; if(el){ noteOff(el);} pressed.delete(key); });
 
-get('master').addEventListener('input', e=>{
+get('master')?.addEventListener('input', e=>{
   master.gain.value=parseFloat(e.target.value);
   if(state.engine==='wasm'){
     voices.forEach(v=>{ if(v.sidNode) v.sidNode.port.postMessage({type:'setMaster', master:master.gain.value}); });
@@ -1186,7 +1031,7 @@ Array.from(document.querySelectorAll('#waveBtns .segBtn')).forEach(btn=>{
   btn.addEventListener('click', ()=>{ setWaveButtons(btn.dataset.wave); });
 });
 populateWavePresets();
-get('wavePreset').addEventListener('change', applyWavePreset);
+get('wavePreset')?.addEventListener('change', applyWavePreset);
 applyWavePreset();
 
 // Filter buttons
@@ -1194,7 +1039,7 @@ Array.from(document.querySelectorAll('#filterBtns .segBtn')).forEach(btn=>{
   btn.addEventListener('click', ()=>{ setFilterButtons(btn.dataset.filter); });
 });
 populateFilterPresets();
-get('filterPreset').addEventListener('change', applyFilterPreset);
+get('filterPreset')?.addEventListener('change', applyFilterPreset);
 // Engine buttons
 Array.from(document.querySelectorAll('#engineBtns .segBtn')).forEach(btn=>{
   btn.addEventListener('click', ()=>{ setEngine(btn.dataset.eng); });
@@ -1204,7 +1049,7 @@ updateFilterVis();
 
 // ADSR presets
 populateADSRPresets();
-get('adsrPreset').addEventListener('change', applyADSRPreset);
+get('adsrPreset')?.addEventListener('change', applyADSRPreset);
 updateADSRVis();
 
 // Live updates -> visuals
