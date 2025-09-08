@@ -73,6 +73,10 @@
     margin: 4px 0 12px;
     text-shadow: 0 0 6px rgba(128,255,128,0.8), 0 0 14px rgba(128,255,128,0.5);
   }
+  .layout{display:grid; grid-template-columns:360px 1fr; grid-template-areas:"controls main" "drums drums"; gap:16px;}
+  .controlsCol{grid-area:controls; display:flex; flex-direction:column; gap:16px;}
+  .mainCol{grid-area:main; display:flex; flex-direction:column; gap:16px;}
+  .drumsBlock{grid-area:drums;}
   .c64-btn {
     background: #201050;
     color: var(--c64-fg);
@@ -179,166 +183,174 @@
 <div id="oscWrap"></div>
 
 <div class="c64-window">
-  <div class="c64-title">C64 PIANO / TRACKER</div>
-  <div class="block">
-  <div class="title">C64 Piano — Controls</div>
-  <!-- Engine toggle -->
-  <div class="row">
-    <div class="c64-seg" id="engineBtns" title="Select synth engine">
-      <button class="segBtn active" data-eng="js" aria-pressed="true">JS</button>
-      <button class="segBtn" data-eng="wasm">WASM</button>
-    </div>
-  </div>
-
-  <!-- Waveform controls: buttons + presets + visual -->
-  <div class="row">
-    <div class="c64-seg" id="waveBtns" title="Select waveform">
-      <button class="segBtn active" data-wave="pulse" aria-pressed="true" title="Pulse (square)">
-        <svg viewBox="0 0 40 20"><path d="M1 10 H10 V2 H22 V18 H34 V10 H39"/></svg> Pulse
-      </button>
-      <button class="segBtn" data-wave="sawtooth" title="Sawtooth">
-        <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Saw
-      </button>
-      <button class="segBtn" data-wave="triangle" title="Triangle">
-        <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Tri
-      </button>
-      <button class="segBtn" data-wave="noise" title="Noise">
-        <svg viewBox="0 0 40 20"><path d="M1 10 L5 6 L9 14 L13 8 L17 12 L21 5 L25 15 L29 7 L33 11 L37 4"/></svg> Noise
-      </button>
-    </div>
-    <label title="Wave-specific preset">
-      Preset
-      <select id="wavePreset"></select>
-    </label>
-    <div class="miniWrap">
-      <canvas id="waveVis" class="mini" width="300" height="80" title="Waveform view"></canvas>
-    </div>
-  </div>
-
-  <!-- Mod + vibrato + octave -->
-  <div class="row">
-    <label title="Pulse width (duty cycle). 0.5 = classic square.">P.W. <input id="sidPW" type="range" min="0.05" max="0.95" step="0.01" value="0.5"></label>
-    <label title="Pulse width modulation rate in Hz.">PWM Rate <input id="sidPWMRate" type="range" min="0" max="12" step="0.1" value="3"></label>
-    <label title="Pulse width modulation depth.">PWM Depth <input id="sidPWMDepth" type="range" min="0" max="0.45" step="0.01" value="0.25"></label>
-    <label title="Vibrato speed in Hz.">Vibrato Hz <input id="vibRate" type="range" min="0" max="12" step="0.1" value="5"></label>
-    <label title="Vibrato depth in cents (100 = 1 semitone).">Vibrato Amt <input id="vibAmt" type="range" min="0" max="50" step="1" value="8"></label>
-    <span class="pill" id="octPill" title=", lowers octave, . raises octave">Octave: <span id="octDisp">0</span>  &nbsp; (&lt; / &gt;)</span>
-    <button class="c64-btn" id="octDown" title="Octave down (,)">−</button>
-    <button class="c64-btn" id="octUp" title="Octave up (.)">＋</button>
-  </div>
-
-  <!-- ADSR + presets + visual -->
-  <div class="row">
-    <label title="Attack time (ms).">A <input id="sidA" type="range" min="0" max="200" step="1" value="8"></label>
-    <label title="Decay time (ms).">D <input id="sidD" type="range" min="0" max="600" step="5" value="120"></label>
-    <label title="Sustain level (0–1).">S <input id="sidS" type="range" min="0" max="1" step="0.01" value="0.5"></label>
-    <label title="Release time (ms).">R <input id="sidR" type="range" min="0" max="1200" step="10" value="240"></label>
-    <label title="ADSR preset">
-      ADSR Preset
-      <select id="adsrPreset"></select>
-    </label>
-    <div class="miniWrap">
-      <canvas id="adsrVis" class="mini" width="260" height="80" title="ADSR envelope"></canvas>
-    </div>
-  </div>
-
-  <!-- Arp + Filter buttons + presets + visual -->
-  <div class="row">
-    <label title="Chord-like fast note cycling.">Arp
-      <select id="arp" title="Arpeggiator pattern">
-        <option value="off" selected>Off</option>
-        <option value="maj">Maj (0,4,7)</option>
-        <option value="min">Min (0,3,7)</option>
-        <option value="pwr">Power (0,7,12)</option>
-      </select>
-    </label>
-    <label title="Arpeggiator rate (steps per second).">Arp Rate <input id="arpRate" type="range" min="4" max="24" step="1" value="12"></label>
-
-    <div class="c64-seg" id="filterBtns" title="Filter type">
-      <button class="segBtn active" data-filter="lowpass" title="Low‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C12 6, 18 4, 39 4"/></svg> LP
-      </button>
-      <button class="segBtn" data-filter="bandpass" title="Band‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C10 18, 15 4, 20 4 C25 4, 30 18, 39 18"/></svg> BP
-      </button>
-      <button class="segBtn" data-filter="highpass" title="High‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C12 18, 18 16, 39 4"/></svg> HP
-      </button>
-      <button class="segBtn" data-filter="off" title="No filter">
-        <svg viewBox="0 0 40 20"><path d="M1 10 H39"/><path d="M4 2 L36 18"/></svg> Off
-      </button>
-    </div>
-    <label title="Filter preset">
-      Filter Preset
-      <select id="filterPreset"></select>
-    </label>
-    <label title="Filter cutoff frequency.">Cutoff <input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
-    <label title="Filter resonance (Q).">Res (Q) <input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
-    <label title="Adds 8‑bit style grit using a waveshaper.">Bit‑crush <input id="crush" type="checkbox" checked></label>
-    <label title="Master output volume.">Volume <input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
-    <div class="miniWrap">
-      <canvas id="filterVis" class="mini" width="300" height="80" title="Filter magnitude"></canvas>
-    </div>
-  </div>
-
-  <div class="note">Keys: A S D F G H J K (white) and W E T Y U (black). Octave with , and . (display shows &lt; / &gt;).</div>
-  </div>
-
-  <div class="block">
-  <div class="title">C64 Piano — Keyboard</div>
-  <div class="kbdWrap">
-    <div class="kbd" id="kbd">
-      <div class="key white" data-note="C" data-key="A"><span class="kLabel">C</span><span class="hint" title="Press A">A</span></div>
-      <div class="key white" data-note="D" data-key="S"><span class="kLabel">D</span><span class="hint" title="Press S">S</span></div>
-      <div class="key white" data-note="E" data-key="D"><span class="kLabel">E</span><span class="hint" title="Press D">D</span></div>
-      <div class="key white" data-note="F" data-key="F"><span class="kLabel">F</span><span class="hint" title="Press F">F</span></div>
-      <div class="key white" data-note="G" data-key="G"><span class="kLabel">G</span><span class="hint" title="Press G">G</span></div>
-      <div class="key white" data-note="A" data-key="H"><span class="kLabel">A</span><span class="hint" title="Press H">H</span></div>
-      <div class="key white" data-note="B" data-key="J"><span class="kLabel">B</span><span class="hint" title="Press J">J</span></div>
-      <div class="key white" data-note="C2" data-key="K"><span class="kLabel">C</span><span class="hint" title="Press K">K</span></div>
-      <div class="key black" data-note="C#" data-key="W" style="left:calc(var(--key-w) - var(--black-w)/2)"><span class="hint" title="Press W">W</span></div>
-      <div class="key black" data-note="D#" data-key="E" style="left:calc(var(--key-w)*2 - var(--black-w)/2)"><span class="hint" title="Press E">E</span></div>
-      <div class="key black" data-note="F#" data-key="T" style="left:calc(var(--key-w)*4 - var(--black-w)/2)"><span class="hint" title="Press T">T</span></div>
-      <div class="key black" data-note="G#" data-key="Y" style="left:calc(var(--key-w)*5 - var(--black-w)/2)"><span class="hint" title="Press Y">Y</span></div>
-      <div class="key black" data-note="A#" data-key="U" style="left:calc(var(--key-w)*6 - var(--black-w)/2)"><span class="hint" title="Press U">U</span></div>
-    </div>
-
-    <div class="history">
-      <div class="historyHeader">
-        <div class="historyTitle">Pattern Editor</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
-          <span class="pill" id="voiceDisp">1</span>
-          <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
-          <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
-          <label style="display:flex;align-items:center;gap:4px">Track
-            <select id="patternSel"></select>
-          </label>
-          <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
-          <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
-          <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
-          <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
-          <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
+<div class="c64-title">C64 PIANO / TRACKER</div>
+<div class="layout">
+  <div class="controlsCol">
+    <div class="block">
+      <div class="title">Oscillator</div>
+      <!-- Engine toggle -->
+      <div class="row">
+        <div class="c64-seg" id="engineBtns" title="Select synth engine">
+          <button class="segBtn active" data-eng="js" aria-pressed="true">JS</button>
+          <button class="segBtn" data-eng="wasm">WASM</button>
         </div>
       </div>
-      <div class="histList" id="histList" aria-live="polite"></div>
+      <!-- Waveform controls: buttons + presets + visual -->
+      <div class="row">
+        <div class="c64-seg" id="waveBtns" title="Select waveform">
+          <button class="segBtn active" data-wave="pulse" aria-pressed="true" title="Pulse (square)">
+            <svg viewBox="0 0 40 20"><path d="M1 10 H10 V2 H22 V18 H34 V10 H39"/></svg> Pulse
+          </button>
+          <button class="segBtn" data-wave="sawtooth" title="Sawtooth">
+            <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Saw
+          </button>
+          <button class="segBtn" data-wave="triangle" title="Triangle">
+            <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Tri
+          </button>
+          <button class="segBtn" data-wave="noise" title="Noise">
+            <svg viewBox="0 0 40 20"><path d="M1 10 L5 6 L9 14 L13 8 L17 12 L21 5 L25 15 L29 7 L33 11 L37 4"/></svg> Noise
+          </button>
+        </div>
+        <label title="Wave-specific preset">
+          Preset
+          <select id="wavePreset"></select>
+        </label>
+        <div class="miniWrap">
+          <canvas id="waveVis" class="mini" width="300" height="80" title="Waveform view"></canvas>
+        </div>
+      </div>
+      <!-- Mod + vibrato + octave -->
+      <div class="row">
+        <label title="Pulse width (duty cycle). 0.5 = classic square.">P.W. <input id="sidPW" type="range" min="0.05" max="0.95" step="0.01" value="0.5"></label>
+        <label title="Pulse width modulation rate in Hz.">PWM Rate <input id="sidPWMRate" type="range" min="0" max="12" step="0.1" value="3"></label>
+        <label title="Pulse width modulation depth.">PWM Depth <input id="sidPWMDepth" type="range" min="0" max="0.45" step="0.01" value="0.25"></label>
+        <label title="Vibrato speed in Hz.">Vibrato Hz <input id="vibRate" type="range" min="0" max="12" step="0.1" value="5"></label>
+        <label title="Vibrato depth in cents (100 = 1 semitone).">Vibrato Amt <input id="vibAmt" type="range" min="0" max="50" step="1" value="8"></label>
+        <span class="pill" id="octPill" title=", lowers octave, . raises octave">Octave: <span id="octDisp">0</span>  &nbsp; (&lt; / &gt;)</span>
+        <button class="c64-btn" id="octDown" title="Octave down (,)">−</button>
+        <button class="c64-btn" id="octUp" title="Octave up (.)">＋</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="title">ADSR Envelope</div>
+      <div class="row">
+        <label title="Attack time (ms).">A <input id="sidA" type="range" min="0" max="200" step="1" value="8"></label>
+        <label title="Decay time (ms).">D <input id="sidD" type="range" min="0" max="600" step="5" value="120"></label>
+        <label title="Sustain level (0–1).">S <input id="sidS" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+        <label title="Release time (ms).">R <input id="sidR" type="range" min="0" max="1200" step="10" value="240"></label>
+        <label title="ADSR preset">
+          ADSR Preset
+          <select id="adsrPreset"></select>
+        </label>
+        <div class="miniWrap">
+          <canvas id="adsrVis" class="mini" width="260" height="80" title="ADSR envelope"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="title">Filter</div>
+      <div class="row">
+        <div class="c64-seg" id="filterBtns" title="Filter type">
+          <button class="segBtn active" data-filter="lowpass" title="Low‑pass">
+            <svg viewBox="0 0 40 20"><path d="M1 18 C12 6, 18 4, 39 4"/></svg> LP
+          </button>
+          <button class="segBtn" data-filter="bandpass" title="Band‑pass">
+            <svg viewBox="0 0 40 20"><path d="M1 18 C10 18, 15 4, 20 4 C25 4, 30 18, 39 18"/></svg> BP
+          </button>
+          <button class="segBtn" data-filter="highpass" title="High‑pass">
+            <svg viewBox="0 0 40 20"><path d="M1 18 C12 18, 18 16, 39 4"/></svg> HP
+          </button>
+          <button class="segBtn" data-filter="off" title="No filter">
+            <svg viewBox="0 0 40 20"><path d="M1 10 H39"/><path d="M4 2 L36 18"/></svg> Off
+          </button>
+        </div>
+        <label title="Filter preset">
+          Filter Preset
+          <select id="filterPreset"></select>
+        </label>
+        <label title="Filter cutoff frequency.">Cutoff <input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
+        <label title="Filter resonance (Q).">Res (Q) <input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
+        <label title="Adds 8‑bit style grit using a waveshaper.">Bit‑crush <input id="crush" type="checkbox" checked></label>
+        <label title="Master output volume.">Volume <input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
+        <div class="miniWrap">
+          <canvas id="filterVis" class="mini" width="300" height="80" title="Filter magnitude"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="title">Arpeggiator</div>
+      <div class="row">
+        <label title="Chord-like fast note cycling.">Arp
+          <select id="arp" title="Arpeggiator pattern">
+            <option value="off" selected>Off</option>
+            <option value="maj">Maj (0,4,7)</option>
+            <option value="min">Min (0,3,7)</option>
+            <option value="pwr">Power (0,7,12)</option>
+          </select>
+        </label>
+        <label title="Arpeggiator rate (steps per second).">Arp Rate <input id="arpRate" type="range" min="4" max="24" step="1" value="12"></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="mainCol">
+    <div class="block keyboardBlock">
+      <div class="title">Keyboard</div>
+      <div class="kbdWrap">
+        <div class="kbd" id="kbd">
+          <div class="key white" data-note="C" data-key="A"><span class="kLabel">C</span><span class="hint" title="Press A">A</span></div>
+          <div class="key white" data-note="D" data-key="S"><span class="kLabel">D</span><span class="hint" title="Press S">S</span></div>
+          <div class="key white" data-note="E" data-key="D"><span class="kLabel">E</span><span class="hint" title="Press D">D</span></div>
+          <div class="key white" data-note="F" data-key="F"><span class="kLabel">F</span><span class="hint" title="Press F">F</span></div>
+          <div class="key white" data-note="G" data-key="G"><span class="kLabel">G</span><span class="hint" title="Press G">G</span></div>
+          <div class="key white" data-note="A" data-key="H"><span class="kLabel">A</span><span class="hint" title="Press H">H</span></div>
+          <div class="key white" data-note="B" data-key="J"><span class="kLabel">B</span><span class="hint" title="Press J">J</span></div>
+          <div class="key white" data-note="C2" data-key="K"><span class="kLabel">C</span><span class="hint" title="Press K">K</span></div>
+          <div class="key black" data-note="C#" data-key="W" style="left:calc(var(--key-w) - var(--black-w)/2)"><span class="hint" title="Press W">W</span></div>
+          <div class="key black" data-note="D#" data-key="E" style="left:calc(var(--key-w)*2 - var(--black-w)/2)"><span class="hint" title="Press E">E</span></div>
+          <div class="key black" data-note="F#" data-key="T" style="left:calc(var(--key-w)*4 - var(--black-w)/2)"><span class="hint" title="Press T">T</span></div>
+          <div class="key black" data-note="G#" data-key="Y" style="left:calc(var(--key-w)*5 - var(--black-w)/2)"><span class="hint" title="Press Y">Y</span></div>
+          <div class="key black" data-note="A#" data-key="U" style="left:calc(var(--key-w)*6 - var(--black-w)/2)"><span class="hint" title="Press U">U</span></div>
+        </div>
+        <div class="history">
+          <div class="historyHeader">
+            <div class="historyTitle">Pattern Editor</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
+              <span class="pill" id="voiceDisp">1</span>
+              <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
+              <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
+              <label style="display:flex;align-items:center;gap:4px">Track
+                <select id="patternSel"></select>
+              </label>
+              <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
+              <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
+              <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
+              <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
+              <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
+            </div>
+          </div>
+          <div class="histList" id="histList" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="note">Keys: A S D F G H J K (white) and W E T Y U (black). Octave with , and . (display shows &lt; / &gt;).</div>
+    </div>
+  </div>
+
+  <div class="drumsBlock block">
+    <div class="title">C64‑style Drum Machine</div>
+    <div class="drums" id="drums"></div>
+    <div class="transport">
+      <button class="c64-btn" id="playBtn" title="Start the 16‑step sequencer">Play</button>
+      <button class="c64-btn" id="stopBtn" title="Stop and clear the playhead highlight">Stop</button>
+      <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
+      <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
     </div>
   </div>
 </div>
-
-  <div class="block">
-  <div class="title">C64‑style Drum Machine</div>
-  <div class="drums" id="drums"></div>
-  <div class="transport">
-    <button class="c64-btn" id="playBtn" title="Start the 16‑step sequencer">Play</button>
-    <button class="c64-btn" id="stopBtn" title="Stop and clear the playhead highlight">Stop</button>
-    <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
-    <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
-  </div>
-</div>
-
-</div>
-
 <script>
 // === Audio setup ===
 const AudioContext = window.AudioContext || window.webkitAudioContext;
