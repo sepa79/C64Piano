@@ -105,7 +105,6 @@
     border-radius: 6px;
     line-height: 1.5;
   }
-  .note { margin-top: 10px; opacity: 0.85; font-size: 12px; }
 
   /* Range inputs */
   input[type=range]{accent-color: var(--c64-accent)}
@@ -113,6 +112,10 @@
   /* Mini canvases */
   .miniWrap{display:flex; gap:12px; align-items:center}
   canvas.mini{background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(255,255,255,0.05)); border:2px solid var(--c64-border); border-radius:8px; backdrop-filter: blur(1px); box-shadow:0 4px 14px rgba(0,0,0,0.25)}
+  .ctrlCard{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
+  .ctrlCard .ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .ctrlCard .miniWrap{margin-left:auto;flex-shrink:0}
+  .octControls{display:flex;align-items:center;gap:6px}
 
   .kbdWrap{display:flex; gap:14px; align-items:flex-start}
   .kbd{position:relative; display:flex; gap:2px; padding:12px; border:2px solid var(--c64-border); border-radius:12px; background:linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.06)); box-shadow:0 10px 30px rgba(0,0,0,.25) inset}
@@ -150,6 +153,11 @@
 #bootOverlay.fade{opacity:0; transition:opacity .4s ease; pointer-events:none;}
 .bootControls{margin-top:14px; display:flex; flex-direction:column; gap:8px; align-items:flex-start;}
 
+/* Help modal */
+#helpModal{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-fg); display:none; align-items:center; justify-content:center; z-index:9999; font-family:"C64 Pro Mono", monospace;}
+#helpModal.show{display:flex;}
+#helpPanel{background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel); border:2px solid var(--c64-border); padding:20px; max-width:600px; width:90%; max-height:80vh; overflow:auto;}
+
   /* Drum machine */
   .drums{display:grid; grid-template-columns:180px repeat(16,1fr); gap:8px; align-items:center}
   .drums .hdr{font-size:12px; color:var(--c64-text); text-align:center}
@@ -171,10 +179,7 @@
   /* App layout */
   #layout{display:grid; flex:1; min-height:0; overflow:hidden; grid-template-columns:600px 1fr 300px; grid-template-rows:1fr auto; gap:20px;}
   #leftRegion,#middleRegion,#rightRegion{display:flex; flex-direction:column; gap:12px; min-height:0; overflow:auto; height:100%;}
-  #leftRegion .row{justify-content:flex-start;}
-  #oscPanel,#adsrPanel,#filterPanel{display:flex; gap:12px; align-items:flex-start; flex-wrap:nowrap;}
-  #oscPanel .oscCtrls,#adsrPanel .adsrCtrls,#filterPanel .filterCtrls{display:flex; flex-direction:column; gap:6px;}
-  #oscPanel .octControls{display:flex; gap:4px; align-items:center;}
+  #leftRegion .ctrlCard{justify-content:flex-start;}
   #drumMachineWrap{grid-column:2; grid-row:2;}
   #topBar{margin-bottom:20px;}
   #trackerWrap{display:flex; flex:1; gap:12px; min-height:0;}
@@ -200,6 +205,15 @@
 </div>
 <div id="oscWrap"></div>
 
+<div id="helpModal">
+  <div id="helpPanel">
+    <h2>Help</h2>
+    <p>Keys: A S D F G H J K (white) and W E T Y U (black).</p>
+    <p>Use &lt; and &gt; or , and . to change octave.</p>
+    <button class="c64-btn" id="helpClose">Close</button>
+  </div>
+</div>
+
 <div class="c64-window">
   <div class="c64-title">C64 PIANO / TRACKER</div>
   <div id="topBar" class="block">
@@ -214,6 +228,7 @@
       <button class="c64-btn" id="loadBtnTop">Load</button>
       <button class="c64-btn" id="saveBtnTop">Save</button>
       <button class="c64-btn" id="saveAsBtnTop">Save As</button>
+      <button class="c64-btn" id="helpBtn" title="Show help">Help</button>
       <div class="transport" style="margin-left:auto">
         <button class="c64-btn" id="transportPlay">Play</button>
         <button class="c64-btn" id="transportStop">Stop</button>
@@ -228,8 +243,8 @@
         <div class="title">C64 Piano — Controls</div>
     <!-- Engine toggle moved to top bar -->
     <!-- Waveform controls: buttons + presets + visual -->
-  <div class="row" id="oscPanel">
-    <div class="oscCtrls">
+  <div class="ctrlCard" id="oscCard">
+    <div class="ctrls">
       <div class="c64-seg" id="waveBtns" title="Select waveform">
         <button class="segBtn active" data-wave="pulse" aria-pressed="true" title="Pulse (square)">
           <svg viewBox="0 0 40 20"><path d="M1 10 H10 V2 H22 V18 H34 V10 H39"/></svg> Pulse
@@ -244,19 +259,16 @@
           <svg viewBox="0 0 40 20"><path d="M1 10 L5 6 L9 14 L13 8 L17 12 L21 5 L25 15 L29 7 L33 11 L37 4"/></svg> Noise
         </button>
       </div>
-      <label title="Wave-specific preset">
-        Preset
-        <select id="wavePreset"></select>
-      </label>
+      <label title="Wave preset">Preset <select id="wavePreset"></select></label>
       <label title="Pulse width (duty cycle). 0.5 = classic square.">P.W. <input id="sidPW" type="range" min="0.05" max="0.95" step="0.01" value="0.5"></label>
       <label title="Pulse width modulation rate in Hz.">PWM Rate <input id="sidPWMRate" type="range" min="0" max="12" step="0.1" value="3"></label>
       <label title="Pulse width modulation depth.">PWM Depth <input id="sidPWMDepth" type="range" min="0" max="0.45" step="0.01" value="0.25"></label>
-      <label title="Vibrato speed in Hz.">Vibrato Hz <input id="vibRate" type="range" min="0" max="12" step="0.1" value="5"></label>
-      <label title="Vibrato depth in cents (100 = 1 semitone).">Vibrato Amt <input id="vibAmt" type="range" min="0" max="50" step="1" value="8"></label>
-      <div class="octControls">
-        <span class="pill" id="octPill" title=", lowers octave, . raises octave">Octave: <span id="octDisp">0</span>  &nbsp; (&lt; / &gt;)</span>
-        <button class="c64-btn" id="octDown" title="Octave down (,)">−</button>
-        <button class="c64-btn" id="octUp" title="Octave up (.)">＋</button>
+      <label title="Vibrato speed in Hz.">Vib Hz <input id="vibRate" type="range" min="0" max="12" step="0.1" value="5"></label>
+      <label title="Vibrato depth in cents (100 = 1 semitone).">Vib Amt <input id="vibAmt" type="range" min="0" max="50" step="1" value="8"></label>
+      <div class="octControls" title="Octave (, lowers, . raises)">
+        <button class="c64-btn" id="octDown" title="Octave down (,)" >&lt;</button>
+        <span class="pill" id="octDisp">0</span>
+        <button class="c64-btn" id="octUp" title="Octave up (.)" >&gt;</button>
       </div>
     </div>
     <div class="miniWrap">
@@ -265,34 +277,22 @@
   </div>
 
   <!-- ADSR + presets + visual -->
-  <div class="row" id="adsrPanel">
-    <div class="adsrCtrls">
+  <div class="ctrlCard" id="adsrCard">
+    <div class="ctrls">
       <label title="Attack time (ms).">A <input id="sidA" type="range" min="0" max="200" step="1" value="8"></label>
       <label title="Decay time (ms).">D <input id="sidD" type="range" min="0" max="600" step="5" value="120"></label>
       <label title="Sustain level (0–1).">S <input id="sidS" type="range" min="0" max="1" step="0.01" value="0.5"></label>
       <label title="Release time (ms).">R <input id="sidR" type="range" min="0" max="1200" step="10" value="240"></label>
-      <label title="ADSR preset">
-        ADSR Preset
-        <select id="adsrPreset"></select>
-      </label>
+      <label title="ADSR preset">Preset <select id="adsrPreset"></select></label>
     </div>
     <div class="miniWrap">
       <canvas id="adsrVis" class="mini" width="180" height="80" title="ADSR envelope"></canvas>
     </div>
   </div>
 
-  <!-- Arp + Filter buttons + presets + visual -->
-  <div class="row" id="filterPanel">
-    <div class="filterCtrls">
-      <label title="Chord-like fast note cycling.">Arp
-        <select id="arp" title="Arpeggiator pattern">
-          <option value="off" selected>Off</option>
-          <option value="maj">Maj (0,4,7)</option>
-          <option value="min">Min (0,3,7)</option>
-          <option value="pwr">Power (0,7,12)</option>
-        </select>
-      </label>
-      <label title="Arpeggiator rate (steps per second).">Arp Rate <input id="arpRate" type="range" min="4" max="24" step="1" value="12"></label>
+  <!-- Filter buttons + presets + visual -->
+  <div class="ctrlCard" id="filterCard">
+    <div class="ctrls">
       <div class="c64-seg" id="filterBtns" title="Filter type">
         <button class="segBtn active" data-filter="lowpass" title="Low‑pass">
           <svg viewBox="0 0 40 20"><path d="M1 18 C12 6, 18 4, 39 4"/></svg> LP
@@ -307,21 +307,30 @@
           <svg viewBox="0 0 40 20"><path d="M1 10 H39"/><path d="M4 2 L36 18"/></svg> Off
         </button>
       </div>
-      <label title="Filter preset">
-        Filter Preset
-        <select id="filterPreset"></select>
-      </label>
+      <label title="Filter preset">Preset <select id="filterPreset"></select></label>
       <label title="Filter cutoff frequency.">Cutoff <input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
       <label title="Filter resonance (Q).">Res (Q) <input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
       <label title="Adds 8‑bit style grit using a waveshaper.">Bit‑crush <input id="crush" type="checkbox" checked></label>
-      <label title="Master output volume.">Volume <input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
+      <label title="Master output volume.">Vol <input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
     </div>
     <div class="miniWrap">
       <canvas id="filterVis" class="mini" width="180" height="80" title="Filter magnitude"></canvas>
     </div>
   </div>
 
-  <div class="note">Keys: A S D F G H J K (white) and W E T Y U (black). Octave with , and . (display shows &lt; / &gt;).</div>
+  <div class="ctrlCard" id="arpCard">
+    <div class="ctrls">
+      <div class="c64-seg" id="arpModeBtns" title="Arpeggiator mode">
+        <button class="segBtn active" data-mode="off">Off</button>
+        <button class="segBtn" data-mode="up">Up</button>
+        <button class="segBtn" data-mode="down">Down</button>
+        <button class="segBtn" data-mode="updown">Up/Down</button>
+        <button class="segBtn" data-mode="random">Random</button>
+      </div>
+      <label title="Arpeggiator rate (steps per second)">Rate <input id="arpRate" type="range" min="1" max="24" step="1" value="12"></label>
+      <label title="Arpeggiator gate (fraction of step)">Gate <input id="arpGate" type="range" min="0.1" max="1" step="0.05" value="0.5"></label>
+    </div>
+  </div>
       </div>
     </div>
     <div id="middleRegion">
@@ -960,8 +969,8 @@ let crusher = makeCrusher(8);
 // Base note frequencies (A4=440)
 const baseFreq = { 'C':261.63,'C#':277.18,'D':293.66,'D#':311.13,'E':329.63,'F':349.23,'F#':369.99,'G':392.00,'G#':415.30,'A':440.00,'A#':466.16,'B':493.88,'C2':523.25 };
 let octave = 0; // -3..+3
-const octDisp = get('octDisp'); const octPill = get('octPill');
-function updateOct(n){ octave = Math.max(-3, Math.min(3, n)); if(octDisp) octDisp.textContent = octave; if(octPill){ octPill.classList.add('glow'); setTimeout(()=>octPill.classList.remove('glow'), 160); } }
+const octDisp = get('octDisp');
+function updateOct(n){ octave = Math.max(-3, Math.min(3, n)); if(octDisp) octDisp.textContent = octave; }
 get('octDown').addEventListener('click', ()=>updateOct(octave-1));
 get('octUp').addEventListener('click', ()=>updateOct(octave+1));
 
@@ -1197,8 +1206,38 @@ function createSIDVoice(note, voice=voices[currentVoice]){
   // Vibrato
   let vib=null; if(osc && vibAmt>0 && vibRate>0){ vib=ctx.createOscillator(); vib.type='sine'; vib.frequency.value=vibRate; const g=ctx.createGain(); g.gain.value=vibAmt; vib.connect(g); g.connect(osc.detune); vib.start(now); }
   // Arpeggiator
-  let arpTimer=null; const arpMode=(get('arp')?get('arp').value:'off'); const arpRate=valNum('arpRate',12); const arpPatterns={off:[0], maj:[0,4,7], min:[0,3,7], pwr:[0,7,12]};
-  if(osc && arpPatterns[arpMode] && arpPatterns[arpMode].length>1){ let idx=0; const interval=Math.max(20, 1000*(1/arpRate)); arpTimer=setInterval(()=>{ const semis=arpPatterns[arpMode][idx%arpPatterns[arpMode].length]; const ff=f*Math.pow(2, semis/12); osc.frequency.setValueAtTime(ff, ctx.currentTime); idx++; }, interval); }
+  let arpTimer=null;
+  const arpModeEl=document.querySelector('#arpModeBtns .active');
+  const arpMode=arpModeEl?arpModeEl.dataset.mode:'off';
+  const arpRate=valNum('arpRate',12);
+  const arpGate=valNum('arpGate',0.5);
+  const arpPatterns={
+    off:[0],
+    up:[0,4,7,12],
+    down:[12,7,4,0],
+    updown:[0,4,7,4],
+    random:[0,4,7,12]
+  };
+  if(osc && arpMode!=='off'){
+    let idx=0;
+    const interval=Math.max(20, 1000*(1/arpRate));
+    arpTimer=setInterval(()=>{
+      let semis;
+      if(arpMode==='random'){
+        const arr=arpPatterns.random;
+        semis=arr[Math.floor(Math.random()*arr.length)];
+      } else {
+        const arr=arpPatterns[arpMode];
+        semis=arr[idx%arr.length];
+        idx++;
+      }
+      const ff=f*Math.pow(2, semis/12);
+      osc.frequency.setValueAtTime(ff, ctx.currentTime);
+      vca.gain.cancelScheduledValues(ctx.currentTime);
+      vca.gain.setValueAtTime(1, ctx.currentTime);
+      vca.gain.setTargetAtTime(0.0001, ctx.currentTime + interval*arpGate, 0.01);
+    }, interval);
+  }
 
   source.start(now);
   return { stop:()=>{ const t=ctx.currentTime; vca.gain.setTargetAtTime(0.0001,t,Math.max(0.01,R)); source.stop(t+R+0.03); if(pwmTimer) clearInterval(pwmTimer); if(vib) vib.stop(t+0.01); if(arpTimer) clearInterval(arpTimer); } };
@@ -1354,6 +1393,13 @@ Array.from(document.querySelectorAll('#filterBtns .segBtn')).forEach(btn=>{
 });
 populateFilterPresets();
 get('filterPreset').addEventListener('change', applyFilterPreset);
+// Arp mode buttons
+Array.from(document.querySelectorAll('#arpModeBtns .segBtn')).forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#arpModeBtns .segBtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
 // Engine buttons
 Array.from(document.querySelectorAll('#engineBtns .segBtn')).forEach(btn=>{
   btn.addEventListener('click', ()=>{ setEngine(btn.dataset.eng); });
@@ -1374,6 +1420,16 @@ updateADSRVis();
 // Initial visuals
 updateWaveVis(); updateFilterVis(); updateADSRVis();
 initBootIntro();
+
+// Help modal
+const helpBtn=get('helpBtn');
+const helpModal=get('helpModal');
+const helpClose=get('helpClose');
+if(helpBtn && helpModal && helpClose){
+  helpBtn.addEventListener('click', ()=>helpModal.classList.add('show'));
+  helpClose.addEventListener('click', ()=>helpModal.classList.remove('show'));
+  helpModal.addEventListener('click', e=>{ if(e.target===helpModal) helpModal.classList.remove('show'); });
+}
 </script>
 </body>
 </html>

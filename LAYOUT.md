@@ -13,6 +13,7 @@ The screen is organized into **three vertical regions** with a small **control b
 - Shows: **Project** selector (if present), **Backend** selector (e.g., JS / WASM / MIDI), **Global Track Length**, **Quantize**, and **Load / Save / Save As** actions.
 - Provides **Play / Stop** transport on the right with a small status indicator.
 - **No instrument control here** (instrument lives in the FX view described below).
+- Includes a **Help** button that opens a modal with usage instructions.
 
 ---
 
@@ -24,6 +25,7 @@ From top to bottom:
 4. **Arpeggiator panel** with mode buttons (Off, Up, Down, Up/Down, Random) and Rate/Gate controls.
 
 These panels are compact and vertically stacked so they collectively occupy about the height of the middle region’s keyboard plus editor area.
+Each panel is presented as a **card**: controls on the left, a small scope preview on the right (where applicable).
 
 ---
 
