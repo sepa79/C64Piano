@@ -18,6 +18,7 @@
     --c64-panel:#44327f;
     --c64-text: var(--c64-fg);
     --glow:#88a4ff;
+    --drum-left:180px;
   }
   *{box-sizing:border-box}
         html,body{height:100vh}
@@ -190,7 +191,7 @@
 
 
   /* Drum machine */
-  .drums{display:grid; grid-template-columns:180px repeat(16,1fr); gap:8px; align-items:center}
+  .drums{display:grid; gap:8px; align-items:center}
   .drums .hdr{font-size:12px; color:var(--c64-text); text-align:center}
   .rowLbl{display:flex; gap:8px; align-items:center}
   .rowLbl .keytag{font-size:11px; background:#111; color:#fff; border-radius:6px; padding:2px 6px; box-shadow:0 1px 0 rgba(255,255,255,0.06) inset}
@@ -203,8 +204,8 @@
   .transport{display:flex; gap:10px; align-items:center; margin-top:10px}
 
   /* Responsive tweaks */
-  @media (max-width: 980px){ :root{ --key-w:54px; --key-h:200px; } .drums{grid-template-columns:140px repeat(16,1fr)} }
-  @media (max-width: 760px){ :root{ --key-w:46px; --key-h:180px; --black-w:32px; --black-h:116px; } .drums{grid-template-columns:110px repeat(16,1fr)} }
+  @media (max-width: 980px){ :root{ --key-w:54px; --key-h:200px; --drum-left:140px; } }
+  @media (max-width: 760px){ :root{ --key-w:46px; --key-h:180px; --black-w:32px; --black-h:116px; --drum-left:110px; } }
   @media (max-width: 560px){ :root{ --key-w:40px; --key-h:160px; --black-w:28px; --black-h:100px; } }
 
   /* App layout */
@@ -1739,6 +1740,8 @@ function buildGrid(){
     else pattern[r]=pattern[r].slice(0,drumSteps);
   }
   drumGrid.innerHTML='';
+  const firstCol=getComputedStyle(document.documentElement).getPropertyValue('--drum-left')||'180px';
+  drumGrid.style.gridTemplateColumns=firstCol.trim()+" repeat("+drumSteps+", 1fr)";
   drumGrid.appendChild(Object.assign(document.createElement('div'),{className:'hdr'}));
   for(let i=0;i<drumSteps;i++){ const h=document.createElement('div'); h.className='hdr colHdr'; h.textContent=(i+1); drumGrid.appendChild(h); }
   for(let r=0;r<4;r++){
