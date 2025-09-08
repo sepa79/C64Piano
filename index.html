@@ -48,14 +48,6 @@
     );
     mix-blend-mode:multiply;
   }
-  body::after{
-    content:"";
-    position:fixed; inset:0;
-    pointer-events:none;
-    box-shadow:0 0 0 40px #6C5EB5 inset;
-    z-index:10000;
-  }
-
   /* Background oscilloscopes */
   #oscWrap{position:fixed; inset:0; display:flex; flex-direction:column; z-index:0; pointer-events:none;}
 #oscWrap canvas{flex:1; width:100%; opacity:0.2;}
@@ -181,9 +173,9 @@
   .patternStatus{margin-top:4px; font-size:12px;}
 
 /* Boot overlay */
-#bootOverlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace; background:var(--c64-bg); color:var(--c64-fg); transform-origin:center;}
-#bootOverlay::before{content:""; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 3px); mix-blend-mode:multiply; opacity:.35;}
-#bootPanel{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:left; font-size:min(calc((100vw - 80px)/40), calc((100vh - 80px)/25)); width:calc(40ch + 80px); height:calc(25em + 80px); padding:40px; box-sizing:border-box; background:#6C5EB5;}
+#bootOverlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace; background:#6C5EB5; color:var(--c64-fg); transform-origin:center; padding:120px; box-sizing:border-box;}
+#bootOverlay::before{content:""; position:fixed; inset:0; pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 3px); mix-blend-mode:multiply; opacity:.35;}
+#bootPanel{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:left; font-size:min(calc((100vw - 240px)/40), calc((100vh - 240px)/25)); width:40ch;}
 #bootText{white-space:pre-wrap; line-height:1; width:40ch; height:25em; background:var(--c64-bg);}
 #bootCursor{display:inline-block; width:12px; height:1em; background:currentColor; margin-left:4px; animation:blink 1s steps(1) infinite;}
 @keyframes blink{50%{opacity:0;}}
@@ -1323,7 +1315,7 @@ function initBootIntro(){
 
   const header=document.createElement('div');
   header.style.textAlign='center';
-  header.textContent='\n**** COMMODORE 64 BASIC V2 ****\n64K RAM SYSTEM  38911 BASIC BYTES FREE\n';
+  header.textContent='\n**** COMMODORE 64 BASIC V2 ****\n\n64K RAM SYSTEM  38911 BASIC BYTES FREE\n';
   cursor.before(header);
   cursor.before(document.createTextNode('\nREADY.\n\n'));
 
