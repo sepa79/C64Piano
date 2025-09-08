@@ -5,7 +5,7 @@ This describes **what goes where on the screen**, without code, CSS, or element 
 ---
 
 ## Overall
-The screen is organized into **three vertical regions** with a small **control bar on top** and a **drum machine strip along the bottom**. The **left region** is for synthesis controls and visualizers, the **middle region** is for performance and editing, and the **right region** shows live **trackers**. Everything fits on one screen; only the trackers and editing grids scroll inside their own areas.
+The screen is organized into **three vertical regions** with a small **control bar on top**. The **left region** is for synthesis controls and visualizers, the **middle region** is for performance and editing (including the drum machine), and the **right region** shows live **trackers**. Everything fits on one screen; only the trackers and editing grids scroll inside their own areas.
 
 ---
 
@@ -36,9 +36,10 @@ Every card includes a header with a small **?** button that opens a local pop‑
 ## Middle Region (play + edit)
 Top to bottom:
 1. **Keyboard strip**: a compact on‑screen keyboard for auditioning notes and showing current octave/hotkeys.
-2. **Editing area with two tabs**:
+2. **Editing area with three tabs**:
    - **Track Editor tab (default):** shows the note grid/pattern editor. This editor creates **tracks/patterns** that can be referenced by the trackers in the right region. The **Global Track Length** from the top bar sets the default length for this editor (you can still override per track if needed).
    - **FX tab:** contains **Instrument selection** and **Instrument Load / Save / Save As** actions, plus the FX rack (Delay, Chorus, Bit/Crush, Drive). **All instrument management happens here**, not in the top bar.
+   - **Drums tab:** hosts a four-lane step sequencer with its own tempo control for programming Kick, Snare, Hat, and Tom patterns.
 
 Switching tabs swaps only this middle editor view; the rest of the screen stays unchanged.
 
@@ -54,17 +55,9 @@ The intention is that the **Track Editor** in the middle creates/edit tracks, an
 
 ---
 
-## Bottom Drum Machine (full width of left + middle regions)
-- A wide strip aligned beneath the left and middle regions (spanning their combined width).
-- Header includes **Voice selection** (which synth voice will render drum events) and **Length** selection (16 / 32 / 64 steps).
-- The grid shows **four rows** (Kick, Snare, Hat, Tom) with step buttons across. It defaults to 16 or 32 visible steps but adapts to the selected length.
-- Interaction in this area is independent of the Track Editor length; the drum length is set by its own selector here.
-
----
-
 ## Behavior Notes
 - **Instrument management** (select, load, save) is **only** on the **FX** tab.
-- **Global Track Length** in the top bar applies to the **Track Editor** by default; the **Drum Machine** length is controlled in its own header.
+- **Global Track Length** in the top bar applies to the **Track Editor** by default; the **Drum Machine** length is controlled within the Drums tab.
 - **Trackers** show **notes vertically** and are intended to **reference** tracks made in the Track Editor.
 - Transport controls and any existing keyboard mappings continue to operate as before.
 
@@ -74,4 +67,3 @@ The intention is that the **Track Editor** in the middle creates/edit tracks, an
 - Keep the left controls compact but readable, with small preview scopes for instant feedback.
 - The middle region’s keyboard is a short strip; most of the middle region height is reserved for editing.
 - The right region’s trackers should be the tallest elements to make vertical note flow readable.
-- The drum machine is prominent but shallow, optimized for quick step entry across four lanes.

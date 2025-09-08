@@ -200,10 +200,9 @@
   @media (max-width: 560px){ :root{ --key-w:40px; --key-h:160px; --black-w:28px; --black-h:100px; } }
 
   /* App layout */
-  #layout{display:grid; flex:1; min-height:0; overflow:hidden; grid-template-columns:600px 1fr 300px; grid-template-rows:1fr auto; gap:20px;}
+  #layout{display:grid; flex:1; min-height:0; overflow:hidden; grid-template-columns:600px 1fr 300px; grid-template-rows:1fr; gap:20px;}
   #leftRegion,#middleRegion,#rightRegion{display:flex; flex-direction:column; gap:12px; min-height:0; overflow:auto; height:100%;}
   #leftRegion .ctrlCard{justify-content:flex-start;}
-  #drumMachineWrap{grid-column:2; grid-row:2;}
   #topBar{margin-bottom:20px;}
   #trackerWrap{display:flex; flex:1; gap:12px; min-height:0;}
   #trackerWrap .tracker{flex:1; border:2px solid var(--c64-border); border-radius:8px; padding:8px; overflow:auto; display:flex; flex-direction:column;}
@@ -422,6 +421,7 @@
         <div class="tabBtns">
           <button class="tabBtn active" data-tab="track">Track Editor</button>
           <button class="tabBtn" data-tab="fx">FX</button>
+          <button class="tabBtn" data-tab="drums">Drums</button>
         </div>
         <div id="trackTab" class="tabContent active">
           <div class="history">
@@ -459,6 +459,16 @@
             <label>Drive <input id="fxDrive" type="range" min="0" max="1" step="0.01" value="0"></label>
           </div>
         </div>
+        <div id="drumsTab" class="tabContent">
+  <div class="title">C64‑style Drum Machine<button class="cardHelp" data-help="drums">?</button></div>
+  <div class="drums" id="drums"></div>
+  <div class="transport">
+    <button class="c64-btn" id="playBtn" title="Start the 16‑step sequencer">Play</button>
+    <button class="c64-btn" id="stopBtn" title="Stop and clear the playhead highlight">Stop</button>
+    <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
+    <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
+  </div>
+        </div>
       </div>
     </div>
     <div id="rightRegion">
@@ -481,18 +491,6 @@
         </div>
       </div>
       <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
-    </div>
-    <div id="drumMachineWrap">
-      <div class="block">
-  <div class="title">C64‑style Drum Machine<button class="cardHelp" data-help="drums">?</button></div>
-  <div class="drums" id="drums"></div>
-  <div class="transport">
-    <button class="c64-btn" id="playBtn" title="Start the 16‑step sequencer">Play</button>
-    <button class="c64-btn" id="stopBtn" title="Stop and clear the playhead highlight">Stop</button>
-    <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
-    <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
-  </div>
-      </div>
     </div>
   </div>
 </div>
@@ -1076,7 +1074,7 @@ function makePulseWave(duty=0.5, harmonics=64){ duty=Math.min(0.98,Math.max(0.02
 // ======= Presets =======
 const wavePresets = {
   pulse: {
-    'Init': { pw:0.5, pwmRate:0, pwmDepth:0, vibRate:0, vibAmt:0 },
+    'Init': { pw:0.5, pwmRate:3, pwmDepth:0.25, vibRate:5, vibAmt:8 },
     'PWM Lead': { pw:0.5, pwmRate:3, pwmDepth:0.25, vibRate:5, vibAmt:8 },
     'Chiptune Bass': { pw:0.25, pwmRate:0.6, pwmDepth:0.08, vibRate:0, vibAmt:0 },
     'Detuned PWM': { pw:0.45, pwmRate:5, pwmDepth:0.35, vibRate:7, vibAmt:12 },
@@ -1138,11 +1136,12 @@ function populateWavePresets(){
 
 function applyWavePreset(){
   const sel = get('wavePreset'); const p = (wavePresets[state.wave]||{})[sel.value]||{};
-  if(p.pw!=null) get('sidPW').value=p.pw;
-  if(p.pwmRate!=null) get('sidPWMRate').value=p.pwmRate;
-  if(p.pwmDepth!=null) get('sidPWMDepth').value=p.pwmDepth;
-  if(p.vibRate!=null) get('vibRate').value=p.vibRate;
-  if(p.vibAmt!=null) get('vibAmt').value=p.vibAmt;
+  const setVal=(id,val)=>{ if(val!=null){ const el=get(id); if(el){ el.value=val; el.dispatchEvent(new Event('input')); }} };
+  setVal('sidPW',p.pw);
+  setVal('sidPWMRate',p.pwmRate);
+  setVal('sidPWMDepth',p.pwmDepth);
+  setVal('vibRate',p.vibRate);
+  setVal('vibAmt',p.vibAmt);
   updateWaveVis();
 }
 
@@ -1190,19 +1189,20 @@ function snapshotParams(){
 
 function applyParams(p){
   if(!p) return;
+  const setVal=(id,val)=>{ const el=get(id); if(el!=null && val!=null){ el.value=val; el.dispatchEvent(new Event('input')); } };
   setWaveButtons(p.wave||'pulse');
-  get('sidPW').value=p.pw;
-  get('sidPWMRate').value=p.pwmRate;
-  get('sidPWMDepth').value=p.pwmDepth;
-  get('vibRate').value=p.vibRate;
-  get('vibAmt').value=p.vibAmt;
-  get('sidA').value=p.A;
-  get('sidD').value=p.D;
-  get('sidS').value=p.S;
-  get('sidR').value=p.R;
+  setVal('sidPW',p.pw);
+  setVal('sidPWMRate',p.pwmRate);
+  setVal('sidPWMDepth',p.pwmDepth);
+  setVal('vibRate',p.vibRate);
+  setVal('vibAmt',p.vibAmt);
+  setVal('sidA',p.A);
+  setVal('sidD',p.D);
+  setVal('sidS',p.S);
+  setVal('sidR',p.R);
   setFilterButtons(p.filter||'off');
-  get('sidCutoff').value=p.cutoff;
-  get('sidRes').value=p.res;
+  setVal('sidCutoff',p.cutoff);
+  setVal('sidRes',p.res);
   if(get('crush')) get('crush').checked=p.crush;
   master.gain.value=p.master;
   if(state.engine==='wasm'){
