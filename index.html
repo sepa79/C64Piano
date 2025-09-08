@@ -161,6 +161,8 @@
   .historyTitle{font-size:13px; font-weight:800}
   .patternGrid{flex:1; min-height:0; width:100%; overflow:auto; display:grid; grid-template-columns:repeat(16,1fr); grid-auto-rows:24px; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px;}
   .patternCell{border:1px solid var(--c64-border);}
+  .patternNote{background:rgba(0,128,255,0.5); border:1px solid #08f; z-index:10; cursor:move; position:relative;}
+  .patternNote::after{content:""; position:absolute; right:0; top:0; width:4px; height:100%; background:rgba(0,0,0,0.2); cursor:ew-resize;}
 
 /* Boot overlay */
 #bootOverlay{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-fg); display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace;}
@@ -768,8 +770,34 @@ const nextVoiceBtn = get('voiceNext');
 let history = [];                // {note, freq, oct, t0, t1, dur}
 const activeHist = new Map();    // el -> index
 const patternGrid = document.getElementById('patternGrid');
+const noteOrder = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+let patternRows = 12, patternCols = 16;
+let drag = null; // current drag state
+
+function renderPattern(){
+  patternGrid.querySelectorAll('.patternNote').forEach(el=>el.remove());
+  history.forEach((h,i)=>{
+    const el=document.createElement('div');
+    el.className='patternNote';
+    el.style.gridRowStart=h.row+1;
+    el.style.gridColumnStart=h.start+1;
+    el.style.gridColumnEnd=h.start+h.dur+1;
+    el.dataset.index=i;
+    patternGrid.appendChild(el);
+  });
+}
+
+function cellFromEvent(e){
+  const rect=patternGrid.getBoundingClientRect();
+  const x=e.clientX-rect.left+patternGrid.scrollLeft;
+  const y=e.clientY-rect.top+patternGrid.scrollTop;
+  const col=Math.floor(x/rect.width*patternCols);
+  const row=Math.floor(y/rect.height*patternRows);
+  return {col:Math.max(0,Math.min(patternCols-1,col)), row:Math.max(0,Math.min(patternRows-1,row))};
+}
 
 function buildPatternGrid(rows = 12, cols = 16) {
+  patternRows = rows; patternCols = cols;
   patternGrid.innerHTML = '';
   patternGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
   patternGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -780,10 +808,72 @@ function buildPatternGrid(rows = 12, cols = 16) {
       patternGrid.appendChild(cell);
     }
   }
+  renderPattern();
 }
 
 function fmtTime(sec){ return (sec).toFixed(3)+'s'; }
 function fmtNote(n, o){ return n + (o>0? ('+'+o) : (o<0? o : '')); }
+
+function startDrag(e){
+  if(e.button!==0) return;
+  e.preventDefault();
+  if(e.target.classList.contains('patternNote')){
+    const idx=parseInt(e.target.dataset.index);
+    const h=history[idx];
+    const rect=e.target.getBoundingClientRect();
+    const resize=(e.clientX-rect.right)>=-6 && (e.clientX-rect.right)<=6;
+    drag={mode:resize?'resize':'move', index:idx, el:e.target, startCol:h.start, startRow:h.row, startDur:h.dur, dur:h.dur, row:h.row, col:h.start};
+  }else{
+    const {row,col}=cellFromEvent(e);
+    const el=document.createElement('div');
+    el.className='patternNote';
+    el.style.gridRowStart=row+1;
+    el.style.gridColumnStart=col+1;
+    el.style.gridColumnEnd=col+2;
+    patternGrid.appendChild(el);
+    drag={mode:'create', el, startCol:col, startRow:row, dur:1};
+  }
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function onMouseMove(e){
+  if(!drag) return;
+  if(drag.mode==='move'){
+    const {row,col}=cellFromEvent(e);
+    const start=Math.min(Math.max(0,col), patternCols-drag.startDur);
+    drag.el.style.gridRowStart=row+1;
+    drag.el.style.gridColumnStart=start+1;
+    drag.el.style.gridColumnEnd=start+drag.startDur+1;
+    drag.row=row; drag.col=start;
+  }else{
+    const {col}=cellFromEvent(e);
+    const end=Math.max(drag.startCol, Math.min(col, patternCols-1));
+    drag.dur=end-drag.startCol+1;
+    drag.el.style.gridColumnEnd=drag.startCol+drag.dur+1;
+  }
+}
+
+function onMouseUp(){
+  if(!drag) return;
+  if(drag.mode==='create'){
+    const noteName=noteOrder[drag.startRow];
+    const entry={note:noteName,row:drag.startRow,start:drag.startCol,dur:drag.dur};
+    const idx=history.push(entry)-1;
+    drag.el.dataset.index=idx;
+  }else if(drag.mode==='move'){
+    const h=history[drag.index];
+    h.row=drag.row; h.start=drag.col; h.note=noteOrder[drag.row];
+  }else if(drag.mode==='resize'){
+    const h=history[drag.index];
+    h.dur=drag.dur;
+  }
+  drag=null;
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup', onMouseUp);
+}
+
+patternGrid.addEventListener('mousedown', startDrag);
 
 buildPatternGrid();
 
@@ -805,7 +895,16 @@ function showPattern(){
   const v=voices[currentVoice];
   const p=v.patterns[selectedPatternIndex()]||[];
   history=[]; buildPatternGrid(); activeHist.clear();
-  p.forEach(ev=>{ if(ev.type==='note'){ const entry={note:ev.note,freq:freqFor(ev.note),oct:0,t0:ev.t0,dur:ev.dur}; history.push(entry); } });
+  const stepSec=(60/valNum('bpm',120))/4;
+  p.forEach(ev=>{
+    if(ev.type==='note'){
+      const row=noteOrder.indexOf(ev.note);
+      const start=Math.round(ev.t0/stepSec);
+      const dur=Math.max(1,Math.round(ev.dur/stepSec));
+      history.push({note:ev.note,row,start,dur});
+    }
+  });
+  renderPattern();
   renderTracker(currentVoice);
 }
 
@@ -827,7 +926,8 @@ function stopRecording(){
 
 function savePattern(){
   const v=voices[currentVoice];
-  v.patterns[selectedPatternIndex()] = v.recording.slice();
+  const stepSec=(60/valNum('bpm',120))/4;
+  v.patterns[selectedPatternIndex()] = history.filter(h=>h.start!=null).map(h=>({type:'note', note:h.note, t0:h.start*stepSec, dur:h.dur*stepSec, params:snapshotParams()}));
   showPattern();
   populateTrackerSelects();
 }
