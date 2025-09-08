@@ -122,6 +122,8 @@
   .sliderWrap input[type=range]{flex:1}
   .sliderWrap input[type=number]{width:60px;background:var(--c64-bg);color:var(--c64-fg);border:1px solid var(--c64-border);border-radius:4px;padding:2px}
   .ctrlCard .miniWrap{margin-left:auto;flex-shrink:0}
+  .ctrlCard .miniWrap.expand{flex:1}
+  .ctrlCard .miniWrap.expand canvas{width:100%}
   #oscCard, #filterCard{flex-direction:column}
   .ctrlCard .topRow{display:flex;gap:12px;align-items:flex-start}
   .ctrlCard .topRow .ctrls{flex:1;min-width:0}
@@ -302,8 +304,8 @@
             </div>
             <label title="Wave preset"><span>Preset</span><select id="wavePreset"></select></label>
           </div>
-          <div class="miniWrap">
-            <canvas id="waveVis" class="mini" width="220" height="80" title="Waveform view"></canvas>
+          <div class="miniWrap expand">
+            <canvas id="waveVis" class="mini" height="80" title="Waveform view"></canvas>
           </div>
         </div>
         <div class="ctrls sliderCol">
@@ -354,8 +356,8 @@
             <label title="Filter preset"><span>Preset</span><select id="filterPreset"></select></label>
             <label title="Adds 8‑bit style grit using a waveshaper."><span>Bit‑crush</span><input id="crush" type="checkbox" checked></label>
           </div>
-          <div class="miniWrap">
-            <canvas id="filterVis" class="mini" width="180" height="80" title="Filter magnitude"></canvas>
+          <div class="miniWrap expand">
+            <canvas id="filterVis" class="mini" height="80" title="Filter magnitude"></canvas>
           </div>
         </div>
         <div class="ctrls sliderCol">
@@ -1215,6 +1217,8 @@ function updateWaveVis(){
   (function loop(){
     const c=get('waveVis');
     if(!c){ waveAnimId=null; return; }
+    c.width=c.clientWidth;
+    c.height=c.clientHeight;
     const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2; g.beginPath();
     const wave=state.wave; let pw=parseFloat(get('sidPW').value); const depth=parseFloat(get('sidPWMDepth').value||0); const rate=parseFloat(get('sidPWMRate').value||0);
     if(wave==='pulse'){
@@ -1239,7 +1243,7 @@ function updateWaveVis(){
 }
 
 function updateFilterVis(){
-  const c=get('filterVis'); if(!c) return; const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2;
+  const c=get('filterVis'); if(!c) return; c.width=c.clientWidth; c.height=c.clientHeight; const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2;
   if(state.filter==='off'){ g.beginPath(); g.moveTo(5,h/2); g.lineTo(w-5,h/2); g.stroke(); return; }
   const biq=ctx.createBiquadFilter(); biq.type=state.filter; biq.Q.value=valNum('sidRes',5); biq.frequency.value=valNum('sidCutoff',1700);
   const N=256; const freq=new Float32Array(N); const mag=new Float32Array(N); const phase=new Float32Array(N);
