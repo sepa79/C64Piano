@@ -114,12 +114,13 @@
   canvas.mini{background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(255,255,255,0.05)); border:2px solid var(--c64-border); border-radius:8px; backdrop-filter: blur(1px); box-shadow:0 4px 14px rgba(0,0,0,0.25)}
   .ctrlCard{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
   .ctrlCard .ctrls{display:flex;flex-direction:column;gap:6px;min-width:180px}
-  .ctrlCard .ctrls label{display:flex;align-items:center;gap:8px}
-  .ctrlCard .ctrls label span{width:60px;flex-shrink:0;text-align:right}
-  .ctrlCard .ctrls label input,.ctrlCard .ctrls label select{flex:1}
+  .ctrlCard .ctrls label{display:flex;flex-direction:column;gap:2px;width:100%}
+  .ctrlCard .ctrls label span{text-align:left}
+  .sliderWrap{display:flex;align-items:center;gap:6px;width:100%}
+  .sliderWrap input[type=range]{flex:1}
+  .sliderWrap input[type=number]{width:60px;background:var(--c64-bg);color:var(--c64-fg);border:1px solid var(--c64-border);border-radius:4px;padding:2px}
   .ctrlCard .miniWrap{margin-left:auto;flex-shrink:0}
-  .octControls{display:flex;align-items:center;gap:6px}
-  .octControls .lbl{width:60px;text-align:right}
+  .octControls{display:flex;align-items:center;gap:6px;justify-content:center}
 
   .synthSection{border-bottom:1px solid var(--c64-border);padding-bottom:12px;margin-bottom:12px}
   .synthSection:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
@@ -217,10 +218,11 @@
 <div id="helpModal">
   <div id="helpPanel">
     <h2>Help</h2>
-    <section id="help-osc"><h3>Oscillator</h3><p>Select waveforms and adjust pulse width, PWM, vibrato, and octave.</p></section>
+    <section id="help-osc"><h3>Oscillator</h3><p>Select waveforms and adjust pulse width, PWM, and vibrato.</p></section>
     <section id="help-adsr"><h3>ADSR</h3><p>Shape attack, decay, sustain, and release of notes.</p></section>
     <section id="help-filter"><h3>Filter</h3><p>Pick low/band/high-pass or off and tweak cutoff, resonance, bit-crush, and volume.</p></section>
     <section id="help-arp"><h3>Arpeggiator</h3><p>Cycle held notes using mode, rate, and gate settings.</p></section>
+    <section id="help-oct"><h3>Octave</h3><p>Shift the keyboard range with the arrow buttons or , and . keys.</p></section>
     <section id="help-keyboard"><h3>Keyboard</h3><p>Play with A–K and W–U keys or click; use &lt; / &gt; or , / . for octave.</p></section>
     <section id="help-track"><h3>Track Editor</h3><p>Edit patterns; global length sets default size.</p></section>
     <section id="help-fx"><h3>FX</h3><p>Choose instruments and adjust Delay, Chorus, Crush, and Drive.</p></section>
@@ -256,7 +258,7 @@
   <div id="layout">
     <div id="leftRegion">
       <div class="block">
-        <div class="title">C64 Piano — Controls</div>
+        <div class="title">Instrument edit: <span id="instName">Default</span><button class="c64-btn" id="openFx" title="Open FX options">FX</button></div>
     <!-- Engine toggle moved to top bar -->
     <div class="synthSection" id="oscSection">
       <div class="sectionHeader"><span>Oscillator</span><button class="cardHelp" data-help="osc">?</button></div>
@@ -282,12 +284,6 @@
       <label title="Pulse width modulation depth."><span>PWM Depth</span><input id="sidPWMDepth" type="range" min="0" max="0.45" step="0.01" value="0.25"></label>
       <label title="Vibrato speed in Hz."><span>Vib Hz</span><input id="vibRate" type="range" min="0" max="12" step="0.1" value="5"></label>
       <label title="Vibrato depth in cents (100 = 1 semitone)."><span>Vib Amt</span><input id="vibAmt" type="range" min="0" max="50" step="1" value="8"></label>
-      <div class="octControls" title="Octave (, lowers, . raises)">
-        <span class="lbl">Octave</span>
-        <button class="c64-btn" id="octDown" title="Octave down (,)" >&lt;</button>
-        <span class="pill" id="octDisp">0</span>
-        <button class="c64-btn" id="octUp" title="Octave up (.)" >&gt;</button>
-      </div>
     </div>
     <div class="miniWrap">
       <canvas id="waveVis" class="mini" width="180" height="80" title="Waveform view"></canvas>
@@ -355,6 +351,18 @@
       <label title="Arpeggiator rate (steps per second)"><span>Rate</span><input id="arpRate" type="range" min="1" max="24" step="1" value="12"></label>
       <label title="Arpeggiator gate (fraction of step)"><span>Gate</span><input id="arpGate" type="range" min="0.1" max="1" step="0.05" value="0.5"></label>
     </div>
+      </div>
+    </div>
+    <div class="synthSection" id="octSection">
+      <div class="sectionHeader"><span>Octave</span><button class="cardHelp" data-help="oct">?</button></div>
+      <div class="ctrlCard" id="octCard">
+        <div class="ctrls">
+          <div class="octControls" title="Octave (, lowers, . raises)">
+            <button class="c64-btn" id="octDown" title="Octave down (,)" >&lt;</button>
+            <span class="pill" id="octDisp">0</span>
+            <button class="c64-btn" id="octUp" title="Octave up (.)" >&gt;</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -878,8 +886,26 @@ document.querySelectorAll('.tabBtn').forEach(btn=>{
   });
 });
 
+function attachNumberInputs(){
+  document.querySelectorAll('input[type=range]').forEach(r=>{
+    if(r.dataset.num) return;
+    const num=document.createElement('input');
+    num.type='number';
+    num.min=r.min; num.max=r.max; num.step=r.step; num.value=r.value;
+    num.className='numField';
+    const wrap=document.createElement('div'); wrap.className='sliderWrap';
+    r.parentNode.insertBefore(wrap,r);
+    wrap.appendChild(r); wrap.appendChild(num);
+    r.dataset.num='1';
+    r.addEventListener('input',()=>num.value=r.value);
+    num.addEventListener('input',()=>{ r.value=num.value; r.dispatchEvent(new Event('input'));});
+  });
+}
+attachNumberInputs();
+
 let instruments=JSON.parse(localStorage.getItem('instruments')||'{}');
 const instSel=get('instrumentSel');
+const instName=get('instName');
 function populateInstrumentSelect(){
   if(!instSel) return;
   instSel.innerHTML='';
@@ -888,10 +914,15 @@ function populateInstrumentSelect(){
   });
 }
 populateInstrumentSelect();
+function updateInstName(){ if(instName) instName.textContent=instSel.value||'Default'; }
+if(instSel){ instSel.addEventListener('change', updateInstName); updateInstName(); }
 
 get('instLoadBtn').addEventListener('click',()=>{ const p=instruments[instSel.value]; if(p) applyParams(p); });
-get('instSaveBtn').addEventListener('click',()=>{ const name=instSel.value||prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; });
-get('instSaveAsBtn').addEventListener('click',()=>{ const name=prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; });
+get('instSaveBtn').addEventListener('click',()=>{ const name=instSel.value||prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; updateInstName(); });
+get('instSaveAsBtn').addEventListener('click',()=>{ const name=prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; updateInstName(); });
+
+const openFx=get('openFx');
+if(openFx){ openFx.addEventListener('click',()=>{ const btn=document.querySelector('.tabBtn[data-tab="fx"]'); if(btn) btn.click(); }); }
 
 function playPattern(v, pattern){
   if(ctx.state!=='running') return;
@@ -1161,28 +1192,33 @@ function applyADSRPreset(){
 // ======= Visuals =======
 function clearCanvas(c){ const g=c.getContext('2d'); g.clearRect(0,0,c.width,c.height); return g; }
 
+let waveAnimating=false;
 function updateWaveVis(){
-  const c=get('waveVis'); if(!c) return; const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2; g.beginPath();
-  const wave=state.wave; const pw=parseFloat(get('sidPW').value); const depth=parseFloat(get('sidPWMDepth').value||0);
-  if(wave==='pulse'){
-    const y1=10, y2=h-10;
-    const minX=w*Math.max(0.05,pw-depth);
-    const maxX=w*Math.min(0.95,pw+depth);
-    g.moveTo(5,(y1+y2)/2);
-    g.lineTo(minX, y1);
-    g.lineTo(minX, y2);
-    g.lineTo(maxX, y2);
-    g.lineTo(maxX, y1);
-    g.lineTo(w-5, y1);
-  } else if(wave==='sawtooth'){
-    g.moveTo(5,h-10); g.lineTo(w-5,10); g.moveTo(5,h-10); g.lineTo(5,10);
-  } else if(wave==='triangle'){
-    g.moveTo(5,h-10); g.lineTo(w*0.5,10); g.lineTo(w-5,h-10);
-  } else { // noise
-    g.moveTo(5, h/2);
-    for(let x=5;x<=w-5;x+=4){ const y=10 + Math.random()*(h-20); g.lineTo(x,y); }
-  }
-  g.stroke();
+  if(waveAnimating) return;
+  waveAnimating=true;
+  (function loop(){
+    const c=get('waveVis'); if(!c) return;
+    const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2; g.beginPath();
+    const wave=state.wave; let pw=parseFloat(get('sidPW').value); const depth=parseFloat(get('sidPWMDepth').value||0); const rate=parseFloat(get('sidPWMRate').value||0);
+    if(wave==='pulse'){
+      const t=performance.now()/1000; pw+=depth*Math.sin(2*Math.PI*rate*t); pw=Math.max(0.05,Math.min(0.95,pw));
+      const y1=10, y2=h-10; const x=w*pw;
+      g.moveTo(5,(y1+y2)/2);
+      g.lineTo(x, y1);
+      g.lineTo(x, y2);
+      g.lineTo(w-5, y2);
+      g.lineTo(w-5, y1);
+    } else if(wave==='sawtooth'){
+      g.moveTo(5,h-10); g.lineTo(w-5,10); g.moveTo(5,h-10); g.lineTo(5,10);
+    } else if(wave==='triangle'){
+      g.moveTo(5,h-10); g.lineTo(w*0.5,10); g.lineTo(w-5,h-10);
+    } else { // noise
+      g.moveTo(5, h/2);
+      for(let x=5;x<=w-5;x+=4){ const y=10 + Math.random()*(h-20); g.lineTo(x,y); }
+    }
+    g.stroke();
+    requestAnimationFrame(loop);
+  })();
 }
 
 function updateFilterVis(){
@@ -1462,14 +1498,21 @@ initBootIntro();
 const helpBtn=get('helpBtn');
 const helpModal=get('helpModal');
 const helpClose=get('helpClose');
+const helpPanel=get('helpPanel');
 function openHelp(section){
   helpModal.classList.add('show');
-  if(section){ setTimeout(()=>{ const el=get('help-'+section); if(el) el.scrollIntoView({behavior:'smooth'}); },0); }
+  const sections=helpPanel.querySelectorAll('section');
+  if(section){ sections.forEach(s=>s.style.display = s.id==='help-'+section ? 'block':'none'); }
+  else{ sections.forEach(s=>s.style.display='block'); }
+}
+function closeHelp(){
+  helpModal.classList.remove('show');
+  helpPanel.querySelectorAll('section').forEach(s=>s.style.display='block');
 }
 if(helpBtn && helpModal && helpClose){
   helpBtn.addEventListener('click', ()=>openHelp());
-  helpClose.addEventListener('click', ()=>helpModal.classList.remove('show'));
-  helpModal.addEventListener('click', e=>{ if(e.target===helpModal) helpModal.classList.remove('show'); });
+  helpClose.addEventListener('click', closeHelp);
+  helpModal.addEventListener('click', e=>{ if(e.target===helpModal) closeHelp(); });
   document.querySelectorAll('.cardHelp').forEach(b=>b.addEventListener('click', ()=>openHelp(b.dataset.help)));
 }
 </script>

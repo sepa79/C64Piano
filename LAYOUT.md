@@ -18,15 +18,18 @@ The screen is organized into **three vertical regions** with a small **control b
 ---
 
 ## Left Region (synthesis & visual feedback)
-From top to bottom:
+At the top a small header reads **Instrument edit**, shows the current instrument name, and offers a tiny **FX** button that jumps to the FX tab for saving/loading instruments.
+
+Below that, the region stacks compact cards:
 1. **Oscillator panel** with four waveform buttons (Pulse, Saw, Triangle, Noise) and a small waveform preview scope; includes pulse‑width and PWM rate controls when Pulse is selected.
 2. **ADSR panel** with an envelope preview scope and Attack/Decay/Sustain/Release controls.
 3. **Filter panel** with a response preview scope, mode buttons (Low‑pass, Band‑pass, High‑pass, Off), and Cutoff/Resonance controls.
 4. **Arpeggiator panel** with mode buttons (Off, Up, Down, Up/Down, Random) and Rate/Gate controls.
+5. **Octave panel** presenting `<` and `>` buttons around the current octave readout.
 
 These panels are compact and vertically stacked so they collectively occupy about the height of the middle region’s keyboard plus editor area.
 Each panel is presented as a **card**: controls on the left, a small scope preview on the right (where applicable).
-Every card includes a header with a small **?** button that opens the help overlay to its section.
+Every card includes a header with a small **?** button that opens the help overlay to its section only.
 
 ---
 
