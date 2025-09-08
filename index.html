@@ -129,6 +129,8 @@
   .ctrlCard .topRow .ctrls{flex:1;min-width:0}
   .ctrlCard .sliderCol{width:100%}
   .octControls{display:flex;align-items:center;gap:6px;justify-content:center}
+  .octBtns{display:flex;gap:4px}
+  .octBtns button.active{background:var(--c64-fg);color:#201050}
 
   .synthSection{border-bottom:1px solid var(--c64-border);padding-bottom:12px;margin-bottom:12px}
   .synthSection:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
@@ -277,7 +279,15 @@
         <div class="ctrls">
           <div class="octControls" title="Octave (, lowers, . raises)">
             <button class="c64-btn" id="octDown" title="Octave down (,)" >&lt;</button>
-            <span class="pill" id="octDisp">0</span>
+            <div class="octBtns" id="octBtns">
+              <button class="c64-btn octBtn" data-oct="-3">-3</button>
+              <button class="c64-btn octBtn" data-oct="-2">-2</button>
+              <button class="c64-btn octBtn" data-oct="-1">-1</button>
+              <button class="c64-btn octBtn" data-oct="0">0</button>
+              <button class="c64-btn octBtn" data-oct="1">1</button>
+              <button class="c64-btn octBtn" data-oct="2">2</button>
+              <button class="c64-btn octBtn" data-oct="3">3</button>
+            </div>
             <button class="c64-btn" id="octUp" title="Octave up (.)" >&gt;</button>
           </div>
         </div>
@@ -1048,10 +1058,15 @@ let crusher = makeCrusher(8);
 // Base note frequencies (A4=440)
 const baseFreq = { 'C':261.63,'C#':277.18,'D':293.66,'D#':311.13,'E':329.63,'F':349.23,'F#':369.99,'G':392.00,'G#':415.30,'A':440.00,'A#':466.16,'B':493.88,'C2':523.25 };
 let octave = 0; // -3..+3
-const octDisp = get('octDisp');
-function updateOct(n){ octave = Math.max(-3, Math.min(3, n)); if(octDisp) octDisp.textContent = octave; }
+const octBtns = [...document.querySelectorAll('#octBtns button')];
+function updateOct(n){
+  octave = Math.max(-3, Math.min(3, n));
+  octBtns.forEach(btn=>btn.classList.toggle('active', Number(btn.dataset.oct)===octave));
+}
+octBtns.forEach(btn=>btn.addEventListener('click', ()=>updateOct(Number(btn.dataset.oct))));
 get('octDown').addEventListener('click', ()=>updateOct(octave-1));
 get('octUp').addEventListener('click', ()=>updateOct(octave+1));
+updateOct(0);
 
 function freqFor(note){ return (typeof note === 'number') ? note : baseFreq[note] * Math.pow(2, octave); }
 

@@ -21,7 +21,7 @@ The screen is organized into **three vertical regions** with a small **control b
 At the top a small header reads **Instrument edit**, shows the current instrument name, and offers a tiny **FX** button that jumps to the FX tab for saving/loading instruments.
 
 Below that, the region stacks compact cards:
-1. **Octave panel** presenting `<` and `>` buttons around the current octave readout.
+1. **Octave panel** with `<` and `>` buttons flanking a row of octave selection buttons.
 2. **Oscillator panel** with four waveform buttons (Pulse, Saw, Triangle, Noise) and a small waveform preview scope; includes pulse‑width and PWM rate controls when Pulse is selected.
 3. **ADSR panel** with an envelope preview scope and Attack/Decay/Sustain/Release controls.
 4. **Filter panel** with a response preview scope, mode buttons (Low‑pass, Band‑pass, High‑pass, Off), a Bit‑crush toggle, and Cutoff/Resonance controls.
