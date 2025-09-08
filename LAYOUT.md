@@ -26,6 +26,7 @@ From top to bottom:
 
 These panels are compact and vertically stacked so they collectively occupy about the height of the middle region’s keyboard plus editor area.
 Each panel is presented as a **card**: controls on the left, a small scope preview on the right (where applicable).
+Every card includes a header with a small **?** button that opens the help overlay to its section.
 
 ---
 
