@@ -427,8 +427,8 @@
     </div>
         </div>
         <div id="drumsTab" class="tabContent">
-  <div class="title">C64‑style Drum Machine<button class="cardHelp" data-help="drums">?</button></div>
-  <div class="row" style="display:flex;gap:6px;align-items:center;margin-top:6px">
+  <div class="title" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">
+    <span>Drums</span>
     <label style="display:flex;align-items:center;gap:4px">Track
       <select id="drumPatternSel"></select>
     </label>
@@ -437,6 +437,7 @@
     <button class="c64-btn" id="clearDrumBtn" title="Clear drum track">✖</button>
     <button class="c64-btn" id="playDrumBtn" title="Play drums">▶</button>
     <button class="c64-btn" id="stopDrumBtn" title="Stop drums">■</button>
+    <button class="cardHelp" data-help="drums">?</button>
   </div>
   <div class="drums" id="drums"></div>
   <div class="transport">
@@ -910,7 +911,7 @@ function startDrag(e){
     const h=history[idx];
     const rect=e.target.getBoundingClientRect();
     const resize=(e.clientX-rect.right)>=-6 && (e.clientX-rect.right)<=6;
-    drag={mode:resize?'resize':'move', index:idx, el:e.target, startCol:h.start, startRow:h.row, startDur:h.dur, dur:h.dur, row:h.row, col:h.start};
+    drag={mode:resize?'resize':'move', index:idx, el:e.target, startCol:h.start, startRow:h.row, startDur:h.dur, dur:h.dur, row:h.row, col:h.start, moved:false};
     cursor.row=h.row; cursor.col=h.start;
   }else{
     const {row,col}=cellFromEvent(e);
@@ -920,7 +921,7 @@ function startDrag(e){
     el.style.gridColumnStart=col+1;
     el.style.gridColumnEnd=col+2;
     patternGrid.appendChild(el);
-    drag={mode:'create', el, startCol:col, startRow:row, dur:1};
+    drag={mode:'create', el, startCol:col, startRow:row, dur:1, moved:false};
     cursor.row=row; cursor.col=col;
   }
   updateCursor();
@@ -930,6 +931,7 @@ function startDrag(e){
 
 function onMouseMove(e){
   if(!drag) return;
+  drag.moved=true;
   if(drag.mode==='move'){
     const {row,col}=cellFromEvent(e);
     const start=Math.min(Math.max(0,col), patternCols-drag.startDur);
@@ -957,9 +959,13 @@ function onMouseUp(){
     removeOverlaps(entry);
     drag.el.dataset.index=history.indexOf(entry);
   }else if(drag.mode==='move'){
-    const h=history[drag.index];
-    h.row=drag.row; h.start=drag.col; h.note=noteOrder[drag.row];
-    removeOverlaps(h);
+    if(!drag.moved){
+      history.splice(drag.index,1);
+    }else{
+      const h=history[drag.index];
+      h.row=drag.row; h.start=drag.col; h.note=noteOrder[drag.row];
+      removeOverlaps(h);
+    }
   }else if(drag.mode==='resize'){
     const h=history[drag.index];
     h.dur=drag.dur;
@@ -991,8 +997,8 @@ function deleteNoteAtCursor(){
 
 patternGrid.addEventListener('mousedown', startDrag);
 
-stepResSel.addEventListener('change', ()=>{ buildPatternGrid(); buildGrid(); });
-patternLenInput.addEventListener('input', ()=>{ buildPatternGrid(); buildGrid(); });
+stepResSel.addEventListener('change', ()=>{ buildPatternGrid(); buildGrid(); voices.forEach((_,i)=>renderTracker(i)); });
+patternLenInput.addEventListener('input', ()=>{ buildPatternGrid(); buildGrid(); voices.forEach((_,i)=>renderTracker(i)); });
 
 buildPatternGrid();
 
@@ -1087,14 +1093,15 @@ function renderTracker(idx){
   const el=get('tracker'+(idx+1));
   el.innerHTML='';
   const p=v.patterns[track]||[];
-  p.forEach(ev=>{
-    if(ev.type==='note'){
-      const row=document.createElement('div');
-      row.className='trackerRow';
-      row.textContent=`${fmtNote(ev.note,0)} @ ${ev.t0.toFixed(2)}s`;
-      el.appendChild(row);
-    }
-  });
+  const stepSec=stepSeconds();
+  const steps=gridCols();
+  for(let s=0;s<steps;s++){
+    const row=document.createElement('div');
+    row.className='trackerRow';
+    const ev=p.find(ev=>ev.type==='note' && Math.round(ev.t0/stepSec)===s);
+    row.textContent=ev?`${fmtNote(ev.note,0)} @ ${ev.t0.toFixed(2)}s`:'';
+    el.appendChild(row);
+  }
   const len=p.reduce((m,ev)=>ev.type==='note'?Math.max(m,ev.t0+(ev.dur||0)):m,0);
   const lenEl=get('trackerLen'+(idx+1));
   if(lenEl) lenEl.textContent=`Len ${len.toFixed(2)}s`;
@@ -1124,7 +1131,7 @@ renderTracker(1);
 const transportPlay = get('transportPlay');
 const transportStop = get('transportStop');
 transportPlay.addEventListener('click',()=>{
-  voices.forEach(v=>{ const idx=v.trackerTrack||0; playPattern(v, v.patterns[idx]); });
+  voices.forEach(v=>{ const idx=v.trackerTrack||0; playPattern(v, v.patterns[idx], false); });
   playDrums();
 });
 transportStop.addEventListener('click',()=>{
@@ -1195,18 +1202,20 @@ get('instSaveAsBtn').addEventListener('click',()=>{ const name=prompt('Instrumen
 const openFx=get('openFx');
 if(openFx){ openFx.addEventListener('click',()=>{ const btn=document.querySelector('.tabBtn[data-tab="fx"]'); if(btn) btn.click(); }); }
 
-function playPattern(v, pattern){
+function playPattern(v, pattern, showPlayhead=true){
   if(ctx.state!=='running') return;
   stopPlayback(v);
   const startAt=ctx.currentTime+0.05;
-  const stepSec=stepSeconds();
-  const playDur=patternCols*stepSec;
-  startPlayhead(playDur, startAt);
+  let playDur=0;
+  pattern.forEach(ev=>{ if(ev.type==='note') playDur=Math.max(playDur, ev.t0+(ev.dur||0)); });
+  if(showPlayhead){
+    const stepSec=stepSeconds();
+    playDur=Math.max(playDur, patternCols*stepSec);
+    startPlayhead(playDur, startAt);
+  }
   v.prevParams = snapshotParams();
-  let patternEnd=0;
-  pattern.forEach(ev=>{ if(ev.type==='note') patternEnd=Math.max(patternEnd, ev.t0+(ev.dur||0)); });
-  v.playTimeouts.push(setTimeout(()=>{ setEngine(v.prevParams.engine); applyParams(v.prevParams); }, (patternEnd+0.1)*1000));
-  v.playTimeouts.push(setTimeout(stopPlayhead, (playDur+0.1)*1000));
+  v.playTimeouts.push(setTimeout(()=>{ setEngine(v.prevParams.engine); applyParams(v.prevParams); }, (playDur+0.1)*1000));
+  if(showPlayhead) v.playTimeouts.push(setTimeout(stopPlayhead, (playDur+0.1)*1000));
   pattern.forEach(ev=>{
     const when=startAt+ev.t0;
     if(ev.type==='note'){
