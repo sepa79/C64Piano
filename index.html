@@ -159,10 +159,11 @@
   .history{min-width:260px; max-width:340px; height:calc(var(--key-h) + 24px); border:2px solid var(--c64-border); border-radius:12px; padding:10px; background:linear-gradient(180deg, rgba(0,0,0,0.08), rgba(255,255,255,0.04)); display:flex; flex-direction:column; box-shadow:0 10px 24px rgba(0,0,0,0.25) inset}
   .historyHeader{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
   .historyTitle{font-size:13px; font-weight:800}
-  .patternGrid{flex:1; min-height:0; width:100%; overflow:auto; display:grid; grid-template-columns:repeat(16,1fr); grid-auto-rows:24px; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px;}
+  .patternGrid{flex:1; min-height:0; width:100%; overflow:auto; display:grid; grid-template-columns:repeat(16,1fr); grid-auto-rows:24px; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px; position:relative;}
   .patternCell{border:1px solid var(--c64-border);}
   .patternNote{background:rgba(0,128,255,0.5); border:1px solid #08f; z-index:10; cursor:move; position:relative;}
   .patternNote::after{content:""; position:absolute; right:0; top:0; width:4px; height:100%; background:rgba(0,0,0,0.2); cursor:ew-resize;}
+  .playhead{position:absolute; top:0; bottom:0; width:2px; background:rgba(255,0,0,0.7); pointer-events:none;}
 
 /* Boot overlay */
 #bootOverlay{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-fg); display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace;}
@@ -434,6 +435,15 @@
                 <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
                 <label style="display:flex;align-items:center;gap:4px">Track
                   <select id="patternSel"></select>
+                </label>
+                <label style="display:flex;align-items:center;gap:4px">Res
+                  <select id="stepResSel">
+                    <option value="8">1/8</option>
+                    <option value="16" selected>1/16</option>
+                  </select>
+                </label>
+                <label style="display:flex;align-items:center;gap:4px">Len
+                  <input id="patternLen" type="number" min="1" value="1" style="width:40px">
                 </label>
                 <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
                 <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
@@ -765,6 +775,8 @@ const patternSel = get('patternSel');
 const voiceDisp = get('voiceDisp');
 const prevVoiceBtn = get('voicePrev');
 const nextVoiceBtn = get('voiceNext');
+const stepResSel = get('stepResSel');
+const patternLenInput = get('patternLen');
 
 // History state – used by pattern editor and note recording
 let history = [];                // {note, freq, oct, t0, t1, dur}
@@ -773,6 +785,39 @@ const patternGrid = document.getElementById('patternGrid');
 const noteOrder = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 let patternRows = 12, patternCols = 16;
 let drag = null; // current drag state
+
+function gridCols(){
+  return (parseInt(stepResSel.value)||16) * (parseInt(patternLenInput.value)||1);
+}
+
+function stepSeconds(){
+  return (60/valNum('bpm',120))*4/(parseInt(stepResSel.value)||16);
+}
+
+const playhead=document.createElement('div');
+playhead.className='playhead';
+let playheadRAF=null;
+
+function startPlayhead(duration, startAt){
+  stopPlayhead();
+  playhead.style.left='0%';
+  patternGrid.appendChild(playhead);
+  const endAt=startAt+duration;
+  const step=()=>{
+    const now=ctx.currentTime;
+    if(now>=endAt){ stopPlayhead(); return; }
+    const p=(now-startAt)/duration;
+    playhead.style.left=(p*100)+"%";
+    playheadRAF=requestAnimationFrame(step);
+  };
+  playheadRAF=requestAnimationFrame(step);
+}
+
+function stopPlayhead(){
+  if(playheadRAF){ cancelAnimationFrame(playheadRAF); playheadRAF=null; }
+  if(playhead.parentNode) playhead.remove();
+  playhead.style.left='0%';
+}
 
 function renderPattern(){
   patternGrid.querySelectorAll('.patternNote').forEach(el=>el.remove());
@@ -796,7 +841,7 @@ function cellFromEvent(e){
   return {col:Math.max(0,Math.min(patternCols-1,col)), row:Math.max(0,Math.min(patternRows-1,row))};
 }
 
-function buildPatternGrid(rows = 12, cols = 16) {
+function buildPatternGrid(rows = 12, cols = gridCols()) {
   patternRows = rows; patternCols = cols;
   patternGrid.innerHTML = '';
   patternGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
@@ -875,6 +920,9 @@ function onMouseUp(){
 
 patternGrid.addEventListener('mousedown', startDrag);
 
+stepResSel.addEventListener('change', ()=>buildPatternGrid());
+patternLenInput.addEventListener('input', ()=>buildPatternGrid());
+
 buildPatternGrid();
 
 function populatePatternSelect(){
@@ -895,7 +943,7 @@ function showPattern(){
   const v=voices[currentVoice];
   const p=v.patterns[selectedPatternIndex()]||[];
   history=[]; buildPatternGrid(); activeHist.clear();
-  const stepSec=(60/valNum('bpm',120))/4;
+  const stepSec=stepSeconds();
   p.forEach(ev=>{
     if(ev.type==='note'){
       const row=noteOrder.indexOf(ev.note);
@@ -926,7 +974,7 @@ function stopRecording(){
 
 function savePattern(){
   const v=voices[currentVoice];
-  const stepSec=(60/valNum('bpm',120))/4;
+  const stepSec=stepSeconds();
   v.patterns[selectedPatternIndex()] = history.filter(h=>h.start!=null).map(h=>({type:'note', note:h.note, t0:h.start*stepSec, dur:h.dur*stepSec, params:snapshotParams()}));
   showPattern();
   populateTrackerSelects();
@@ -1051,10 +1099,14 @@ function playPattern(v, pattern){
   if(ctx.state!=='running') return;
   stopPlayback(v);
   const startAt=ctx.currentTime+0.05;
+  const stepSec=stepSeconds();
+  const playDur=patternCols*stepSec;
+  startPlayhead(playDur, startAt);
   v.prevParams = snapshotParams();
   let patternEnd=0;
   pattern.forEach(ev=>{ if(ev.type==='note') patternEnd=Math.max(patternEnd, ev.t0+(ev.dur||0)); });
   v.playTimeouts.push(setTimeout(()=>{ setEngine(v.prevParams.engine); applyParams(v.prevParams); }, (patternEnd+0.1)*1000));
+  v.playTimeouts.push(setTimeout(stopPlayhead, (playDur+0.1)*1000));
   pattern.forEach(ev=>{
     const when=startAt+ev.t0;
     if(ev.type==='note'){
@@ -1076,6 +1128,7 @@ function playPattern(v, pattern){
 function stopPlayback(v){
   if(v.playTimeouts){ v.playTimeouts.forEach(id=>clearTimeout(id)); v.playTimeouts=[]; }
   if(v.prevParams){ setEngine(v.prevParams.engine); applyParams(v.prevParams); v.prevParams=null; }
+  stopPlayhead();
 }
 
 // Boot intro + audio unlock
