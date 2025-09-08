@@ -28,8 +28,8 @@
     letter-spacing:0.02em;
     font-size:15px; line-height:1.3;
     font-family: "C64 Pro Mono", monospace;
-          display:grid;
-          place-items:center;
+          display:flex;
+          flex-direction:column;
           overflow-x:hidden;
           overflow-y:auto;
         }
@@ -60,7 +60,8 @@
   .pill.glow{box-shadow:0 0 0 2px var(--glow) inset}
 
   .c64-window {
-    width: min(980px, 96vw);
+    width:100vw;
+    height:100vh;
     border: 4px solid var(--c64-border);
     box-shadow: 0 0 0 2px #000 inset, 0 0 32px rgba(0,0,0,0.45);
     padding: 16px 18px 20px;
