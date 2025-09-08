@@ -1340,18 +1340,32 @@ function initBootIntro(){
   window.addEventListener('keydown', keyHandler);
 }
 async function runTypingSequence(cursor, controls, startBtn){
-  const lines=[
-    'LOAD "C64 PIANO",8,1',
-    'RUN'
-  ];
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
-  for(const line of lines){
-    for(const ch of line){
-      cursor.before(document.createTextNode(ch));
-      await delay(20+Math.random()*20);
-    }
-    cursor.before(document.createTextNode('\n'));
+
+  // Type LOAD command
+  const loadCmd='LOAD "C64 PIANO",8,1';
+  for(const ch of loadCmd){
+    cursor.before(document.createTextNode(ch));
+    await delay(20+Math.random()*20);
   }
+  // newline plus empty line
+  cursor.before(document.createTextNode('\n\n'));
+
+  // Simulate drive search/loading messages
+  cursor.before(document.createTextNode('SEARCHING FOR C64 PIANO\n'));
+  await delay(1000);
+  cursor.before(document.createTextNode('LOADING\n'));
+  await delay(2000);
+  cursor.before(document.createTextNode('READY.\n'));
+
+  // Type RUN command
+  const runCmd='RUN';
+  for(const ch of runCmd){
+    cursor.before(document.createTextNode(ch));
+    await delay(20+Math.random()*20);
+  }
+  cursor.before(document.createTextNode('\n'));
+
   await delay(500);
   cursor.style.display='none';
   const msg='PRESS RETURN TO ENABLE SOUND';
