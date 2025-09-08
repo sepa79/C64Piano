@@ -166,15 +166,14 @@
   @media (max-width: 560px){ :root{ --key-w:40px; --key-h:160px; --black-w:28px; --black-h:100px; } }
 
   /* App layout */
-  #layout{display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr auto; gap:20px;}
+  #layout{display:grid; grid-template-columns:300px 1fr 220px; grid-template-rows:1fr auto; gap:20px;}
   #leftRegion,#middleRegion,#rightRegion{display:flex; flex-direction:column; gap:12px;}
   #drumMachineWrap{grid-column:1 / span 2;}
   #topBar{margin-bottom:20px;}
-  #rightRegion{overflow:auto;}
-  #rightRegion .tracker{flex:1; border:2px solid var(--c64-border); border-radius:8px; padding:8px; overflow:auto;}
-  #rightRegion .tracker + .tracker{margin-top:12px;}
-  #rightRegion .tracker .title{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-  #rightRegion .tracker .title .trackerLen{margin-left:auto;font-size:12px;}
+  #trackerWrap{display:flex; flex:1; gap:12px;}
+  #trackerWrap .tracker{flex:1; border:2px solid var(--c64-border); border-radius:8px; padding:8px; overflow:auto; display:flex; flex-direction:column;}
+  #trackerWrap .tracker .title{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  #trackerWrap .tracker .title .trackerLen{margin-left:auto;font-size:12px;}
   .trackerRow{font-size:12px;padding:2px 0;}
   .tabBtns{display:flex; gap:6px; margin-bottom:8px;}
   .tabContent{display:none;}
@@ -379,19 +378,21 @@
       </div>
     </div>
     <div id="rightRegion">
-      <div class="block tracker">
-        <div class="title">Voice 1 — Track
-          <select class="trackerTrackSel" data-voice="0"></select>
-          <span class="trackerLen" id="trackerLen1"></span>
+      <div id="trackerWrap">
+        <div class="block tracker">
+          <div class="title">Voice 1 — Track
+            <select class="trackerTrackSel" data-voice="0"></select>
+            <span class="trackerLen" id="trackerLen1"></span>
+          </div>
+          <div id="tracker1"></div>
         </div>
-        <div id="tracker1"></div>
-      </div>
-      <div class="block tracker">
-        <div class="title">Voice 2 — Track
-          <select class="trackerTrackSel" data-voice="1"></select>
-          <span class="trackerLen" id="trackerLen2"></span>
+        <div class="block tracker">
+          <div class="title">Voice 2 — Track
+            <select class="trackerTrackSel" data-voice="1"></select>
+            <span class="trackerLen" id="trackerLen2"></span>
+          </div>
+          <div id="tracker2"></div>
         </div>
-        <div id="tracker2"></div>
       </div>
       <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
     </div>
