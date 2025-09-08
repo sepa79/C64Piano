@@ -1512,7 +1512,7 @@ function applyParams(p){
   setVal('sidCutoff',p.cutoff);
   setVal('sidRes',p.res);
   if(get('crush')) get('crush').checked=p.crush;
-  master.gain.value=p.master;
+  if(Number.isFinite(p.master)) master.gain.value=p.master;
   if(state.engine==='wasm'){
     voices.forEach(v=>{ if(v.sidNode) v.sidNode.port.postMessage({type:'setMaster', master:master.gain.value}); });
   }
