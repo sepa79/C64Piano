@@ -115,7 +115,7 @@
   .ctrlCard{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
   .ctrlCard .ctrls{display:flex;flex-direction:column;gap:6px;min-width:180px;flex:1}
   .ctrlCard .ctrls label{display:flex;align-items:center;gap:6px;width:100%}
-  .ctrlCard .ctrls label span{width:110px;text-align:left;white-space:nowrap}
+  .ctrlCard .ctrls label span{width:130px;text-align:left;white-space:nowrap}
   .ctrlCard .ctrls label select{flex:1;min-width:0}
   #wavePreset{width:100%}
   .sliderWrap{display:flex;align-items:center;gap:6px;flex:1}
@@ -351,9 +351,9 @@
         </button>
       </div>
       <label title="Filter preset"><span>Preset</span><select id="filterPreset"></select></label>
+      <label title="Adds 8‑bit style grit using a waveshaper."><span>Bit‑crush</span><input id="crush" type="checkbox" checked></label>
       <label title="Filter cutoff frequency."><span>Cutoff</span><input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
       <label title="Filter resonance (Q)."><span>Res (Q)</span><input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
-      <label title="Adds 8‑bit style grit using a waveshaper."><span>Bit‑crush</span><input id="crush" type="checkbox" checked></label>
       <label title="Master output volume."><span>Vol</span><input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
     </div>
     <div class="miniWrap">
