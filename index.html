@@ -173,6 +173,9 @@
   #rightRegion{overflow:auto;}
   #rightRegion .tracker{flex:1; border:2px solid var(--c64-border); border-radius:8px; padding:8px; overflow:auto;}
   #rightRegion .tracker + .tracker{margin-top:12px;}
+  #rightRegion .tracker .title{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  #rightRegion .tracker .title .trackerLen{margin-left:auto;font-size:12px;}
+  .trackerRow{font-size:12px;padding:2px 0;}
   .tabBtns{display:flex; gap:6px; margin-bottom:8px;}
   .tabContent{display:none;}
   .tabContent.active{display:block;}
@@ -331,35 +334,63 @@
       <div class="key black" data-note="A#" data-key="U" style="left:calc(var(--key-w)*6 - var(--black-w)/2)"><span class="hint" title="Press U">U</span></div>
     </div>
 
-    <div class="history">
-      <div class="historyHeader">
-        <div class="historyTitle">Pattern Editor</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
-          <span class="pill" id="voiceDisp">1</span>
-          <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
-          <label style="display:flex;align-items:center;gap:4px">Track
-            <select id="patternSel"></select>
-          </label>
-          <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
-          <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
-          <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
-          <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
-          <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
-        </div>
-      </div>
-      <div class="histList" id="histList" aria-live="polite"></div>
     </div>
-  </div>
+      </div>
+      <div class="block">
+        <div class="tabBtns">
+          <button class="tabBtn active" data-tab="track">Track Editor</button>
+          <button class="tabBtn" data-tab="fx">FX</button>
+        </div>
+        <div id="trackTab" class="tabContent active">
+          <div class="history">
+            <div class="historyHeader">
+              <div class="historyTitle">Pattern Editor</div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
+                <span class="pill" id="voiceDisp">1</span>
+                <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
+                <label style="display:flex;align-items:center;gap:4px">Track
+                  <select id="patternSel"></select>
+                </label>
+                <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
+                <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
+                <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
+                <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
+                <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
+              </div>
+            </div>
+            <div class="histList" id="histList" aria-live="polite"></div>
+          </div>
+        </div>
+        <div id="fxTab" class="tabContent">
+          <div class="row">
+            <label>Instrument <select id="instrumentSel"></select></label>
+            <button class="c64-btn" id="instLoadBtn">Load</button>
+            <button class="c64-btn" id="instSaveBtn">Save</button>
+            <button class="c64-btn" id="instSaveAsBtn">Save As</button>
+          </div>
+          <div class="row">
+            <label>Delay <input id="fxDelay" type="range" min="0" max="1" step="0.01" value="0"></label>
+            <label>Chorus <input id="fxChorus" type="range" min="0" max="1" step="0.01" value="0"></label>
+            <label>Bit/Crush <input id="fxCrush" type="checkbox"></label>
+            <label>Drive <input id="fxDrive" type="range" min="0" max="1" step="0.01" value="0"></label>
+          </div>
+        </div>
       </div>
     </div>
     <div id="rightRegion">
       <div class="block tracker">
-        <div class="title">Voice 1</div>
+        <div class="title">Voice 1 — Track
+          <select class="trackerTrackSel" data-voice="0"></select>
+          <span class="trackerLen" id="trackerLen1"></span>
+        </div>
         <div id="tracker1"></div>
       </div>
       <div class="block tracker">
-        <div class="title">Voice 2</div>
+        <div class="title">Voice 2 — Track
+          <select class="trackerTrackSel" data-voice="1"></select>
+          <span class="trackerLen" id="trackerLen2"></span>
+        </div>
         <div id="tracker2"></div>
       </div>
       <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
@@ -605,6 +636,7 @@ function addVoice(){
   const g=canvas.getContext('2d');
   const data=new Uint8Array(analyser.fftSize);
   const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), recording:[], activeRec:new Map(), isRecording:false, recStart:0, playTimeouts:[]};
+  voice.trackerTrack=0;
   if(state.engine==='wasm' && wasmBytes){
     const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
     node.connect(gain); voice.sidNode=node; voice.nextId=0;
@@ -624,6 +656,8 @@ function addVoice(){
   if(voices.length===1) selectVoice(0); else selectVoice(voices.length-1);
   resizeOsc();
   drawVoice(voice);
+  populateTrackerSelects();
+  renderTracker(voices.length-1);
 }
 
 function selectVoice(i){
@@ -632,6 +666,7 @@ function selectVoice(i){
   voiceDisp.textContent=currentVoice+1;
   populatePatternSelect();
   showPattern();
+  renderTracker(currentVoice);
 }
 
 
@@ -680,6 +715,7 @@ function populatePatternSelect(){
     o.textContent=i+1;
     patternSel.appendChild(o);
   }
+  populateTrackerSelects();
 }
 
 function selectedPatternIndex(){ return parseInt(patternSel.value)||0; }
@@ -689,6 +725,7 @@ function showPattern(){
   const p=v.patterns[selectedPatternIndex()]||[];
   history=[]; histList.innerHTML=''; activeHist.clear();
   p.forEach(ev=>{ if(ev.type==='note'){ const entry={note:ev.note,freq:freqFor(ev.note),oct:0,t0:ev.t0,dur:ev.dur}; history.push(entry); renderRow(history.length-1); } });
+  renderTracker(currentVoice);
 }
 
 function startRecording(){
@@ -711,6 +748,7 @@ function savePattern(){
   const v=voices[currentVoice];
   v.patterns[selectedPatternIndex()] = v.recording.slice();
   showPattern();
+  populateTrackerSelects();
 }
 
 function playSelected(){
@@ -723,7 +761,51 @@ function clearPattern(){
   const v=voices[currentVoice];
   v.patterns[selectedPatternIndex()] = [];
   history=[]; histList.innerHTML=''; activeHist.clear();
+  populateTrackerSelects();
+  renderTracker(currentVoice);
 }
+
+function populateTrackerSelects(){
+  document.querySelectorAll('.trackerTrackSel').forEach(sel=>{
+    const idx=parseInt(sel.dataset.voice);
+    const v=voices[idx];
+    sel.innerHTML='';
+    if(!v) return;
+    for(let i=0;i<v.patterns.length;i++){
+      const o=document.createElement('option');
+      o.value=i; o.textContent=i+1; sel.appendChild(o);
+    }
+    sel.value=v.trackerTrack||0;
+  });
+}
+
+function renderTracker(idx){
+  const v=voices[idx]; if(!v) return;
+  const track=v.trackerTrack||0;
+  const el=get('tracker'+(idx+1));
+  el.innerHTML='';
+  const p=v.patterns[track]||[];
+  p.forEach(ev=>{
+    if(ev.type==='note'){
+      const row=document.createElement('div');
+      row.className='trackerRow';
+      row.textContent=`${fmtNote(ev.note,0)} @ ${ev.t0.toFixed(2)}s`;
+      el.appendChild(row);
+    }
+  });
+  const len=p.reduce((m,ev)=>ev.type==='note'?Math.max(m,ev.t0+(ev.dur||0)):m,0);
+  const lenEl=get('trackerLen'+(idx+1));
+  if(lenEl) lenEl.textContent=`Len ${len.toFixed(2)}s`;
+}
+
+document.querySelectorAll('.trackerTrackSel').forEach(sel=>{
+  sel.addEventListener('change',()=>{
+    const idx=parseInt(sel.dataset.voice);
+    const v=voices[idx];
+    v.trackerTrack=parseInt(sel.value);
+    renderTracker(idx);
+  });
+});
 
 prevVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice-1));
 nextVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice+1));
@@ -735,6 +817,31 @@ saveBtn.addEventListener('click', savePattern);
 patternSel.addEventListener('change', showPattern);
 get('addVoiceBtn').addEventListener('click', addVoice);
 addVoice();
+populateTrackerSelects();
+renderTracker(0);
+
+document.querySelectorAll('.tabBtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const tab=btn.dataset.tab;
+    document.querySelectorAll('.tabBtn').forEach(b=>b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.tabContent').forEach(c=>c.classList.toggle('active', c.id===tab+'Tab'));
+  });
+});
+
+let instruments=JSON.parse(localStorage.getItem('instruments')||'{}');
+const instSel=get('instrumentSel');
+function populateInstrumentSelect(){
+  if(!instSel) return;
+  instSel.innerHTML='';
+  Object.keys(instruments).forEach(name=>{
+    const o=document.createElement('option'); o.value=name; o.textContent=name; instSel.appendChild(o);
+  });
+}
+populateInstrumentSelect();
+
+get('instLoadBtn').addEventListener('click',()=>{ const p=instruments[instSel.value]; if(p) applyParams(p); });
+get('instSaveBtn').addEventListener('click',()=>{ const name=instSel.value||prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; });
+get('instSaveAsBtn').addEventListener('click',()=>{ const name=prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; });
 
 function playPattern(v, pattern){
   if(ctx.state!=='running') return;
