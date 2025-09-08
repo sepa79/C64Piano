@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>C64 Piano</title>
+<script src="coi-serviceworker.js"></script>
 <style>
   @font-face {
     font-family: "C64 Pro Mono";
@@ -645,7 +646,6 @@ async function loadWasmBytes(){
   const bin=atob(SID_WASM_BASE64);
   wasmBytes=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) wasmBytes[i]=bin.charCodeAt(i);
-  console.log('WASM bytes loaded', wasmBytes.length);
   return wasmBytes;
 }
 
@@ -664,9 +664,9 @@ function showBanner(msg){
 async function setEngine(type){
   if(state.engine===type) return;
   if(type==='wasm'){
-    if(window.location.protocol==='file:'){
-      console.warn('WASM engine requires running from an HTTP server; falling back to JS');
-      showBanner('WASM engine requires running from an HTTP server. Try https://sepa79.github.io/C64Piano/');
+    if(window.location.protocol==='file:' || !window.crossOriginIsolated){
+      console.warn('WASM engine requires cross-origin isolation over HTTP; falling back to JS');
+      showBanner('WASM engine requires cross-origin isolation. Using JS engine.');
       setEngineButtons('js');
       return;
     }
