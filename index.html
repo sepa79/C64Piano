@@ -401,6 +401,11 @@
 </div>
     <div id="middleRegion">
       <div class="block">
+        <div class="tabBtns">
+          <button class="tabBtn active" data-tab="piano">Piano</button>
+          <button class="tabBtn" data-tab="drums">Drums</button>
+        </div>
+        <div id="pianoTab" class="tabContent active">
   <div class="title">C64 Piano — Keyboard<button class="cardHelp" data-help="keyboard">?</button></div>
   <div class="kbdWrap">
     <div class="kbd" id="kbd">
@@ -420,11 +425,29 @@
     </div>
 
     </div>
+        </div>
+        <div id="drumsTab" class="tabContent">
+  <div class="title">C64‑style Drum Machine<button class="cardHelp" data-help="drums">?</button></div>
+  <div class="row" style="display:flex;gap:6px;align-items:center;margin-top:6px">
+    <label style="display:flex;align-items:center;gap:4px">Track
+      <select id="drumPatternSel"></select>
+    </label>
+    <button class="c64-btn" id="saveDrumBtn" title="Save drum track">Save</button>
+    <button class="c64-btn" id="loadDrumBtn" title="Load drum track">Load</button>
+    <button class="c64-btn" id="clearDrumBtn" title="Clear drum track">✖</button>
+    <button class="c64-btn" id="playDrumBtn" title="Play drums">▶</button>
+    <button class="c64-btn" id="stopDrumBtn" title="Stop drums">■</button>
+  </div>
+  <div class="drums" id="drums"></div>
+  <div class="transport">
+    <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
+    <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
+  </div>
+        </div>
       </div>
       <div class="block">
         <div class="tabBtns">
           <button class="tabBtn active" data-tab="track">Track Editor</button>
-          <button class="tabBtn" data-tab="drums">Drums</button>
           <button class="tabBtn" data-tab="fx">FX</button>
         </div>
         <div id="trackTab" class="tabContent active">
@@ -469,24 +492,6 @@
             <label>Bit/Crush <input id="fxCrush" type="checkbox"></label>
             <label>Drive <input id="fxDrive" type="range" min="0" max="1" step="0.01" value="0"></label>
           </div>
-        </div>
-        <div id="drumsTab" class="tabContent">
-  <div class="title">C64‑style Drum Machine<button class="cardHelp" data-help="drums">?</button></div>
-  <div class="row" style="display:flex;gap:6px;align-items:center;margin-top:6px">
-    <label style="display:flex;align-items:center;gap:4px">Track
-      <select id="drumPatternSel"></select>
-    </label>
-    <button class="c64-btn" id="saveDrumBtn" title="Save drum track">Save</button>
-    <button class="c64-btn" id="loadDrumBtn" title="Load drum track">Load</button>
-    <button class="c64-btn" id="clearDrumBtn" title="Clear drum track">✖</button>
-    <button class="c64-btn" id="playDrumBtn" title="Play drums">▶</button>
-    <button class="c64-btn" id="stopDrumBtn" title="Stop drums">■</button>
-  </div>
-  <div class="drums" id="drums"></div>
-  <div class="transport">
-    <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
-    <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
-  </div>
         </div>
       </div>
     </div>
@@ -1141,11 +1146,14 @@ document.addEventListener('keydown', e=>{
   }
 });
 
-document.querySelectorAll('.tabBtn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const tab=btn.dataset.tab;
-    document.querySelectorAll('.tabBtn').forEach(b=>b.classList.toggle('active', b===btn));
-    document.querySelectorAll('.tabContent').forEach(c=>c.classList.toggle('active', c.id===tab+'Tab'));
+document.querySelectorAll('.tabBtns').forEach(group=>{
+  const btns=group.querySelectorAll('.tabBtn');
+  btns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const tab=btn.dataset.tab;
+      btns.forEach(b=>b.classList.toggle('active', b===btn));
+      group.parentElement.querySelectorAll('.tabContent').forEach(c=>c.classList.toggle('active', c.id===tab+'Tab'));
+    });
   });
 });
 
