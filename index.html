@@ -159,9 +159,8 @@
   .history{min-width:260px; max-width:340px; height:calc(var(--key-h) + 24px); border:2px solid var(--c64-border); border-radius:12px; padding:10px; background:linear-gradient(180deg, rgba(0,0,0,0.08), rgba(255,255,255,0.04)); display:flex; flex-direction:column; box-shadow:0 10px 24px rgba(0,0,0,0.25) inset}
   .historyHeader{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
   .historyTitle{font-size:13px; font-weight:800}
-  .histList{flex:1; overflow:auto; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px; padding:6px}
-  .histRow{display:grid; grid-template-columns:64px 1fr 64px; gap:6px; font-size:12px; padding:4px 6px; border-bottom:1px dotted rgba(169,187,255,0.5)}
-  .histRow:last-child{border-bottom:none}
+  .patternGrid{flex:1; min-height:0; width:100%; overflow:auto; display:grid; grid-template-columns:repeat(16,1fr); grid-auto-rows:24px; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px;}
+  .patternCell{border:1px solid var(--c64-border);}
 
 /* Boot overlay */
 #bootOverlay{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-fg); display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace;}
@@ -441,7 +440,7 @@
                 <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
               </div>
             </div>
-            <div class="histList" id="histList" aria-live="polite"></div>
+            <div class="patternGrid" id="patternGrid" role="grid"></div>
           </div>
         </div>
         <div id="fxTab" class="tabContent">
@@ -768,28 +767,25 @@ const nextVoiceBtn = get('voiceNext');
 // History state – used by pattern editor and note recording
 let history = [];                // {note, freq, oct, t0, t1, dur}
 const activeHist = new Map();    // el -> index
-const histList = document.getElementById('histList');
+const patternGrid = document.getElementById('patternGrid');
+
+function buildPatternGrid(rows = 12, cols = 16) {
+  patternGrid.innerHTML = '';
+  patternGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  patternGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'patternCell';
+      patternGrid.appendChild(cell);
+    }
+  }
+}
 
 function fmtTime(sec){ return (sec).toFixed(3)+'s'; }
 function fmtNote(n, o){ return n + (o>0? ('+'+o) : (o<0? o : '')); }
-function renderRow(i){
-  const h = history[i];
-  const baseT = (history[0]?history[0].t0:h.t0);
-  const rel = h.t0-baseT;
-  const row = document.createElement('div');
-  row.className = 'histRow';
-  row.id = 'hist-'+i;
-  row.innerHTML = `<div>${fmtTime(rel)}</div><div>${fmtNote(h.note,h.oct)}</div><div class="dur">${h.dur?fmtTime(h.dur):''}</div>`;
-  histList.appendChild(row);
-  histList.scrollTop = histList.scrollHeight;
-}
-function updateRow(i){
-  const row = document.getElementById('hist-'+i);
-  if(!row) return;
-  const durEl = row.querySelector('.dur');
-  const h = history[i];
-  if(durEl) durEl.textContent = h.dur?fmtTime(h.dur):'';
-}
+
+buildPatternGrid();
 
 function populatePatternSelect(){
   const v=voices[currentVoice];
@@ -808,15 +804,15 @@ function selectedPatternIndex(){ return parseInt(patternSel.value)||0; }
 function showPattern(){
   const v=voices[currentVoice];
   const p=v.patterns[selectedPatternIndex()]||[];
-  history=[]; histList.innerHTML=''; activeHist.clear();
-  p.forEach(ev=>{ if(ev.type==='note'){ const entry={note:ev.note,freq:freqFor(ev.note),oct:0,t0:ev.t0,dur:ev.dur}; history.push(entry); renderRow(history.length-1); } });
+  history=[]; buildPatternGrid(); activeHist.clear();
+  p.forEach(ev=>{ if(ev.type==='note'){ const entry={note:ev.note,freq:freqFor(ev.note),oct:0,t0:ev.t0,dur:ev.dur}; history.push(entry); } });
   renderTracker(currentVoice);
 }
 
 function startRecording(){
   const v=voices[currentVoice];
   stopPlayback(v);
-  history=[]; histList.innerHTML=''; activeHist.clear();
+  history=[]; buildPatternGrid(); activeHist.clear();
   v.recording=[]; v.activeRec=new Map(); v.isRecording=true; v.recStart=ctx.currentTime;
   recordBtn.disabled=true; stopBtn.disabled=false;
 }
@@ -845,7 +841,7 @@ function playSelected(){
 function clearPattern(){
   const v=voices[currentVoice];
   v.patterns[selectedPatternIndex()] = [];
-  history=[]; histList.innerHTML=''; activeHist.clear();
+  history=[]; buildPatternGrid(); activeHist.clear();
   populateTrackerSelects();
   renderTracker(currentVoice);
 }
@@ -1387,7 +1383,7 @@ function noteOn(el){
   active.set(el,{node:v, voiceIndex:idx});
   el.classList.add('active');
   const entry={ note:n, freq:freqFor(n), oct:octave, t0:ctx.currentTime, t1:null, dur:null };
-  const hIdx=history.push(entry)-1; activeHist.set(el, hIdx); renderRow(hIdx);
+  const hIdx=history.push(entry)-1; activeHist.set(el, hIdx);
   const vVoice=voices[idx];
   if(vVoice.isRecording){
     const rec={type:'note', note:n, t0:ctx.currentTime - vVoice.recStart, dur:null, params:snapshotParams()};
@@ -1403,7 +1399,7 @@ function noteOff(el){
   if(hIdx!=null){
     history[hIdx].t1=ctx.currentTime;
     history[hIdx].dur=Math.max(0.01, history[hIdx].t1-history[hIdx].t0);
-    updateRow(hIdx); activeHist.delete(el);
+    activeHist.delete(el);
   }
   const idx=act?act.voiceIndex:currentVoice;
   const vVoice=voices[idx];
