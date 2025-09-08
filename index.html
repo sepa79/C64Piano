@@ -1751,28 +1751,37 @@ get('playDrumBtn').addEventListener('click', playDrums);
 get('stopDrumBtn').addEventListener('click', stopDrums);
 
 function loadSampleSong(){
+  // Extend editor to two measures for a longer demo
+  patternLenInput.value=2;
+  buildPatternGrid();
+  buildGrid();
+
+  const steps=gridCols();
+
+  // Distinct instrument snapshots for melody and bass
+  const leadParams={...snapshotParams(), wave:'triangle'};
+  const bassParams={...snapshotParams(), wave:'sawtooth', cutoff:1200};
+
   const v=voices[0];
-  const params=snapshotParams();
   v.patternNames[0]='Sample Melody';
   v.patternNames[1]='Sample Bass';
-  v.patterns[0]=[
-    {type:'note', note:'C', t0:0,   dur:0.5, params},
-    {type:'note', note:'E', t0:0.5, dur:0.5, params},
-    {type:'note', note:'G', t0:1,   dur:0.5, params},
-    {type:'note', note:'C', t0:1.5, dur:0.5, params}
-  ];
-  v.patterns[1]=[
-    {type:'note', note:'C', t0:0, dur:1, params},
-    {type:'note', note:'G', t0:1, dur:1, params}
-  ];
+
+  // 16-step melody with varied notes
+  const melody=['C','E','G','B','C2','B','G','E','F','A','G','E','D','F','E','C'];
+  v.patterns[0]=melody.map((n,i)=>({type:'note', note:n, t0:i*0.25, dur:0.25, params:leadParams}));
+
+  // Simple bass accompaniment
+  const bass=['C','G','A','F','C','G','A','F'];
+  v.patterns[1]=bass.map((n,i)=>({type:'note', note:n, t0:i*0.5, dur:0.5, params:bassParams}));
+
   voices[0].trackerTrack=0;
   if(voices[1]) voices[1].trackerTrack=1;
 
-  const steps=gridCols();
+  // Drum track with one hit per step
   const dp={0:Array(steps).fill(false),1:Array(steps).fill(false),2:Array(steps).fill(false),3:Array(steps).fill(false)};
-  dp[1][0]=dp[1][8]=true; // Kick
-  dp[0][4]=dp[0][12]=true; // Snare
-  for(let i=0;i<steps;i+=2) dp[2][i]=true; // Hat
+  [0,8,16,24].forEach(i=>dp[1][i]=true);      // Kick
+  [4,12,20,28].forEach(i=>dp[0][i]=true);     // Snare
+  [2,6,10,14,18,22,26,30].forEach(i=>dp[2][i]=true); // Hat
   drumPatternNames[0]='Sample Drums';
   drumPatterns[0]={pattern:dp, instruments:['Snare','Kick','Hat','Tom'], steps};
   drumIndex=0;
