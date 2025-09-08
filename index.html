@@ -20,7 +20,7 @@
     --glow:#88a4ff;
   }
   *{box-sizing:border-box}
-        html,body{min-height:100vh}
+        html,body{height:100vh}
         body{
     margin:0;
     background: var(--c64-bg);
@@ -28,10 +28,9 @@
     letter-spacing:0.02em;
     font-size:15px; line-height:1.3;
     font-family: "C64 Pro Mono", monospace;
-          display:grid;
-          place-items:center;
-          overflow-x:hidden;
-          overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
         }
   /* Scanlines overlay */
   body::before{
@@ -54,18 +53,22 @@
 
 .row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
   .row label{font-size:12px; display:flex; gap:6px; align-items:center}
-  .title{font-weight:800; margin:0 0 10px 0; font-size:15px; letter-spacing:0.6px; text-shadow:0 1px 0 rgba(0,0,0,0.35)}
+  .title{font-weight:800; margin:0 0 10px 0; font-size:15px; letter-spacing:0.6px; text-shadow:0 1px 0 rgba(0,0,0,0.35); display:flex; justify-content:space-between; align-items:center; gap:6px}
 
   .pill{padding:4px 10px; border-radius:999px; background:rgba(169,187,255,0.15); border:1px solid var(--c64-border); font-size:12px}
   .pill.glow{box-shadow:0 0 0 2px var(--glow) inset}
 
   .c64-window {
-    width: min(980px, 96vw);
+    width:100vw;
+    height:100vh;
     border: 4px solid var(--c64-border);
     box-shadow: 0 0 0 2px #000 inset, 0 0 32px rgba(0,0,0,0.45);
     padding: 16px 18px 20px;
     background: linear-gradient(180deg, #44327f 0%, #3a2b6d 100%);
     border-radius: 8px;
+    display:flex;
+    flex-direction:column;
+    overflow:auto;
   }
   .c64-title {
     text-align: center;
@@ -102,7 +105,6 @@
     border-radius: 6px;
     line-height: 1.5;
   }
-  .note { margin-top: 10px; opacity: 0.85; font-size: 12px; }
 
   /* Range inputs */
   input[type=range]{accent-color: var(--c64-accent)}
@@ -110,6 +112,30 @@
   /* Mini canvases */
   .miniWrap{display:flex; gap:12px; align-items:center}
   canvas.mini{background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(255,255,255,0.05)); border:2px solid var(--c64-border); border-radius:8px; backdrop-filter: blur(1px); box-shadow:0 4px 14px rgba(0,0,0,0.25)}
+  .ctrlCard{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
+  .ctrlCard .ctrls{display:flex;flex-direction:column;gap:6px;min-width:180px;flex:1}
+  .ctrlCard .ctrls label{display:flex;align-items:center;gap:6px;width:100%}
+  .ctrlCard .ctrls label span{width:130px;text-align:left;white-space:nowrap}
+  .ctrlCard .ctrls label select{flex:1;min-width:0}
+  #wavePreset{width:100%}
+  .sliderWrap{display:flex;align-items:center;gap:6px;flex:1}
+  .sliderWrap input[type=range]{flex:1}
+  .sliderWrap input[type=number]{width:60px;background:var(--c64-bg);color:var(--c64-fg);border:1px solid var(--c64-border);border-radius:4px;padding:2px}
+  .ctrlCard .miniWrap{margin-left:auto;flex-shrink:0}
+  .ctrlCard .miniWrap.expand{flex:1}
+  .ctrlCard .miniWrap.expand canvas{width:100%}
+  #oscCard, #filterCard{flex-direction:column}
+  .ctrlCard .topRow{display:flex;gap:12px;align-items:flex-start}
+  .ctrlCard .topRow .ctrls{flex:1;min-width:0}
+  .ctrlCard .sliderCol{width:100%}
+  .octControls{display:flex;align-items:center;gap:6px;justify-content:center}
+  .octBtns{display:flex;gap:4px}
+  .octBtns button.active{background:var(--c64-fg);color:#201050}
+
+  .synthSection{border-bottom:1px solid var(--c64-border);padding-bottom:12px;margin-bottom:12px}
+  .synthSection:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+  .sectionHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .cardHelp{background:none;border:0;color:var(--c64-fg);cursor:pointer;font-size:12px}
 
   .kbdWrap{display:flex; gap:14px; align-items:flex-start}
   .kbd{position:relative; display:flex; gap:2px; padding:12px; border:2px solid var(--c64-border); border-radius:12px; background:linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.06)); box-shadow:0 10px 30px rgba(0,0,0,.25) inset}
@@ -147,6 +173,14 @@
 #bootOverlay.fade{opacity:0; transition:opacity .4s ease; pointer-events:none;}
 .bootControls{margin-top:14px; display:flex; flex-direction:column; gap:8px; align-items:flex-start;}
 
+/* Help modal */
+#helpModal{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-fg); display:none; align-items:center; justify-content:center; z-index:9999; font-family:"C64 Pro Mono", monospace;}
+#helpModal.show{display:flex;}
+#helpPanel{background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel); border:2px solid var(--c64-border); padding:20px; max-width:600px; width:90%; max-height:80vh; overflow:auto;}
+.helpPopup{position:absolute; background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel); border:2px solid var(--c64-border); padding:12px; border-radius:6px; z-index:1000; max-width:240px;}
+.helpPopup h3{margin-top:0;font-size:14px}
+
+
   /* Drum machine */
   .drums{display:grid; grid-template-columns:180px repeat(16,1fr); gap:8px; align-items:center}
   .drums .hdr{font-size:12px; color:var(--c64-text); text-align:center}
@@ -164,6 +198,21 @@
   @media (max-width: 980px){ :root{ --key-w:54px; --key-h:200px; } .drums{grid-template-columns:140px repeat(16,1fr)} }
   @media (max-width: 760px){ :root{ --key-w:46px; --key-h:180px; --black-w:32px; --black-h:116px; } .drums{grid-template-columns:110px repeat(16,1fr)} }
   @media (max-width: 560px){ :root{ --key-w:40px; --key-h:160px; --black-w:28px; --black-h:100px; } }
+
+  /* App layout */
+  #layout{display:grid; flex:1; min-height:0; overflow:hidden; grid-template-columns:600px 1fr 300px; grid-template-rows:1fr; gap:20px;}
+  #leftRegion,#middleRegion,#rightRegion{display:flex; flex-direction:column; gap:12px; min-height:0; overflow:auto; height:100%;}
+  #leftRegion .ctrlCard{justify-content:flex-start;}
+  #topBar{margin-bottom:20px;}
+  #trackerWrap{display:flex; flex:1; gap:12px; min-height:0;}
+  #trackerWrap .tracker{flex:1; border:2px solid var(--c64-border); border-radius:8px; padding:8px; overflow:auto; display:flex; flex-direction:column;}
+  #trackerWrap .tracker .title{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  #trackerWrap .tracker .title .trackerLen{margin-left:auto;font-size:12px;}
+  .trackerRow{font-size:12px;padding:2px 0;}
+  .tabBtns{display:flex; gap:6px; margin-bottom:8px;}
+  #middleRegion .block:last-child{flex:1; display:flex; flex-direction:column; min-height:0;}
+  .tabContent{display:none; flex:1; overflow:auto;}
+  .tabContent.active{display:block;}
 </style>
 </head>
 <body>
@@ -178,114 +227,177 @@
 </div>
 <div id="oscWrap"></div>
 
+<div id="helpModal">
+  <div id="helpPanel">
+    <h2>Help</h2>
+    <section id="help-osc"><h3>Oscillator</h3><p>Select waveforms and adjust pulse width, PWM, and vibrato.</p></section>
+    <section id="help-adsr"><h3>ADSR</h3><p>Shape attack, decay, sustain, and release of notes.</p></section>
+    <section id="help-filter"><h3>Filter</h3><p>Pick low/band/high-pass or off and tweak cutoff, resonance, bit-crush, and volume.</p></section>
+    <section id="help-arp"><h3>Arpeggiator</h3><p>Cycle held notes using mode, rate, and gate settings.</p></section>
+    <section id="help-oct"><h3>Octave</h3><p>Shift the keyboard range with the arrow buttons or , and . keys.</p></section>
+    <section id="help-keyboard"><h3>Keyboard</h3><p>Play with A–K and W–U keys or click; use &lt; / &gt; or , / . for octave.</p></section>
+    <section id="help-track"><h3>Track Editor</h3><p>Edit patterns; global length sets default size.</p></section>
+    <section id="help-fx"><h3>FX</h3><p>Choose instruments and adjust Delay, Chorus, Crush, and Drive.</p></section>
+    <section id="help-trackers"><h3>Trackers</h3><p>Right column shows two voice trackers referencing patterns.</p></section>
+    <section id="help-drums"><h3>Drum Machine</h3><p>Program Kick, Snare, Hat, and Tom steps with its own length.</p></section>
+    <button class="c64-btn" id="helpClose">Close</button>
+  </div>
+</div>
+
 <div class="c64-window">
   <div class="c64-title">C64 PIANO / TRACKER</div>
-  <div class="block">
-  <div class="title">C64 Piano — Controls</div>
-  <!-- Engine toggle -->
-  <div class="row">
-    <div class="c64-seg" id="engineBtns" title="Select synth engine">
-      <button class="segBtn active" data-eng="js" aria-pressed="true">JS</button>
-      <button class="segBtn" data-eng="wasm">WASM</button>
+  <div id="topBar" class="block">
+    <div class="row">
+      <label>Project <select id="projectSel"></select></label>
+      <div class="c64-seg" id="engineBtns" title="Select synth engine">
+        <button class="segBtn active" data-eng="js" aria-pressed="true">JS</button>
+        <button class="segBtn" data-eng="wasm">WASM</button>
+      </div>
+      <label>Global Track Length <input id="globalTrackLen" type="number" min="1" value="16"></label>
+      <label>Quantize <input id="quantize" type="number" min="1" value="1"></label>
+      <button class="c64-btn" id="loadBtnTop">Load</button>
+      <button class="c64-btn" id="saveBtnTop">Save</button>
+      <button class="c64-btn" id="saveAsBtnTop">Save As</button>
+      <button class="c64-btn" id="helpBtn" title="Show help">Help</button>
+      <div class="transport" style="margin-left:auto">
+        <button class="c64-btn" id="transportPlay">Play</button>
+        <button class="c64-btn" id="transportStop">Stop</button>
+        <span class="pill" id="transportStatus">●</span>
+      </div>
     </div>
   </div>
 
-  <!-- Waveform controls: buttons + presets + visual -->
-  <div class="row">
-    <div class="c64-seg" id="waveBtns" title="Select waveform">
-      <button class="segBtn active" data-wave="pulse" aria-pressed="true" title="Pulse (square)">
-        <svg viewBox="0 0 40 20"><path d="M1 10 H10 V2 H22 V18 H34 V10 H39"/></svg> Pulse
-      </button>
-      <button class="segBtn" data-wave="sawtooth" title="Sawtooth">
-        <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Saw
-      </button>
-      <button class="segBtn" data-wave="triangle" title="Triangle">
-        <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Tri
-      </button>
-      <button class="segBtn" data-wave="noise" title="Noise">
-        <svg viewBox="0 0 40 20"><path d="M1 10 L5 6 L9 14 L13 8 L17 12 L21 5 L25 15 L29 7 L33 11 L37 4"/></svg> Noise
-      </button>
+  <div id="layout">
+    <div id="leftRegion">
+      <div class="block">
+        <div class="title">Instrument edit: <span id="instName">Default</span><button class="c64-btn" id="openFx" title="Open FX options">FX</button></div>
+    <!-- Engine toggle moved to top bar -->
+    <div class="synthSection" id="octSection">
+      <div class="sectionHeader"><span>Octave</span><button class="cardHelp" data-help="oct">?</button></div>
+      <div class="ctrlCard" id="octCard">
+        <div class="ctrls">
+          <div class="octControls" title="Octave (, lowers, . raises)">
+            <button class="c64-btn" id="octDown" title="Octave down (,)" >&lt;</button>
+            <div class="octBtns" id="octBtns">
+              <button class="c64-btn octBtn" data-oct="-3">-3</button>
+              <button class="c64-btn octBtn" data-oct="-2">-2</button>
+              <button class="c64-btn octBtn" data-oct="-1">-1</button>
+              <button class="c64-btn octBtn" data-oct="0">0</button>
+              <button class="c64-btn octBtn" data-oct="1">1</button>
+              <button class="c64-btn octBtn" data-oct="2">2</button>
+              <button class="c64-btn octBtn" data-oct="3">3</button>
+            </div>
+            <button class="c64-btn" id="octUp" title="Octave up (.)" >&gt;</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <label title="Wave-specific preset">
-      Preset
-      <select id="wavePreset"></select>
-    </label>
+    <div class="synthSection" id="oscSection">
+      <div class="sectionHeader"><span>Oscillator</span><button class="cardHelp" data-help="osc">?</button></div>
+      <div class="ctrlCard" id="oscCard">
+        <div class="topRow">
+          <div class="ctrls">
+            <div class="c64-seg" id="waveBtns" title="Select waveform">
+              <button class="segBtn active" data-wave="pulse" aria-pressed="true" title="Pulse (square)">
+                <svg viewBox="0 0 40 20"><path d="M1 10 H10 V2 H22 V18 H34 V10 H39"/></svg> Pulse
+              </button>
+              <button class="segBtn" data-wave="sawtooth" title="Sawtooth">
+                <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Saw
+              </button>
+              <button class="segBtn" data-wave="triangle" title="Triangle">
+                <svg viewBox="0 0 40 20"><path d="M1 18 L13 2 L25 18 L37 2"/></svg> Tri
+              </button>
+              <button class="segBtn" data-wave="noise" title="Noise">
+                <svg viewBox="0 0 40 20"><path d="M1 10 L5 6 L9 14 L13 8 L17 12 L21 5 L25 15 L29 7 L33 11 L37 4"/></svg> Noise
+              </button>
+            </div>
+            <label title="Wave preset"><span>Preset</span><select id="wavePreset"></select></label>
+          </div>
+          <div class="miniWrap expand">
+            <canvas id="waveVis" class="mini" height="80" title="Waveform view"></canvas>
+          </div>
+        </div>
+        <div class="ctrls sliderCol">
+          <label title="Pulse width (duty cycle). 0.5 = classic square."><span>P.W.</span><input id="sidPW" type="range" min="0.05" max="0.95" step="0.01" value="0.5"></label>
+          <label title="Pulse width modulation rate in Hz."><span>PWM Rate</span><input id="sidPWMRate" type="range" min="0" max="12" step="0.1" value="3"></label>
+          <label title="Pulse width modulation depth."><span>PWM Depth</span><input id="sidPWMDepth" type="range" min="0" max="0.45" step="0.01" value="0.25"></label>
+          <label title="Vibrato speed in Hz."><span>Vib Hz</span><input id="vibRate" type="range" min="0" max="12" step="0.1" value="5"></label>
+          <label title="Vibrato depth in cents (100 = 1 semitone)."><span>Vib Amt</span><input id="vibAmt" type="range" min="0" max="50" step="1" value="8"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="synthSection" id="adsrSection">
+      <div class="sectionHeader"><span>ADSR</span><button class="cardHelp" data-help="adsr">?</button></div>
+      <div class="ctrlCard" id="adsrCard">
+    <div class="ctrls">
+      <label title="Attack time (ms)."><span>A</span><input id="sidA" type="range" min="0" max="200" step="1" value="8"></label>
+      <label title="Decay time (ms)."><span>D</span><input id="sidD" type="range" min="0" max="600" step="5" value="120"></label>
+      <label title="Sustain level (0–1)."><span>S</span><input id="sidS" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+      <label title="Release time (ms)."><span>R</span><input id="sidR" type="range" min="0" max="1200" step="10" value="240"></label>
+      <label title="ADSR preset"><span>Preset</span><select id="adsrPreset"></select></label>
+    </div>
     <div class="miniWrap">
-      <canvas id="waveVis" class="mini" width="300" height="80" title="Waveform view"></canvas>
+      <canvas id="adsrVis" class="mini" width="180" height="80" title="ADSR envelope"></canvas>
+    </div>
+      </div>
+    </div>
+
+    <div class="synthSection" id="filterSection">
+      <div class="sectionHeader"><span>Filter</span><button class="cardHelp" data-help="filter">?</button></div>
+      <div class="ctrlCard" id="filterCard">
+        <div class="topRow">
+          <div class="ctrls">
+            <div class="c64-seg" id="filterBtns" title="Filter type">
+              <button class="segBtn active" data-filter="lowpass" title="Low‑pass">
+                <svg viewBox="0 0 40 20"><path d="M1 18 C12 6, 18 4, 39 4"/></svg> LP
+              </button>
+              <button class="segBtn" data-filter="bandpass" title="Band‑pass">
+                <svg viewBox="0 0 40 20"><path d="M1 18 C10 18, 15 4, 20 4 C25 4, 30 18, 39 18"/></svg> BP
+              </button>
+              <button class="segBtn" data-filter="highpass" title="High‑pass">
+                <svg viewBox="0 0 40 20"><path d="M1 18 C12 18, 18 16, 39 4"/></svg> HP
+              </button>
+              <button class="segBtn" data-filter="off" title="No filter">
+                <svg viewBox="0 0 40 20"><path d="M1 10 H39"/><path d="M4 2 L36 18"/></svg> Off
+              </button>
+            </div>
+            <label title="Filter preset"><span>Preset</span><select id="filterPreset"></select></label>
+            <label title="Adds 8‑bit style grit using a waveshaper."><span>Bit‑crush</span><input id="crush" type="checkbox" checked></label>
+          </div>
+          <div class="miniWrap expand">
+            <canvas id="filterVis" class="mini" height="80" title="Filter magnitude"></canvas>
+          </div>
+        </div>
+        <div class="ctrls sliderCol">
+          <label title="Filter cutoff frequency."><span>Cutoff</span><input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
+          <label title="Filter resonance (Q)."><span>Res (Q)</span><input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
+          <label title="Master output volume."><span>Vol</span><input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="synthSection" id="arpSection">
+      <div class="sectionHeader"><span>Arpeggiator</span><button class="cardHelp" data-help="arp">?</button></div>
+      <div class="ctrlCard" id="arpCard">
+    <div class="ctrls">
+      <div class="c64-seg" id="arpModeBtns" title="Arpeggiator mode">
+        <button class="segBtn active" data-mode="off">Off</button>
+        <button class="segBtn" data-mode="up">Up</button>
+        <button class="segBtn" data-mode="down">Down</button>
+        <button class="segBtn" data-mode="updown">Up/Down</button>
+        <button class="segBtn" data-mode="random">Random</button>
+      </div>
+      <label title="Arpeggiator rate (steps per second)"><span>Rate</span><input id="arpRate" type="range" min="1" max="24" step="1" value="12"></label>
+      <label title="Arpeggiator gate (fraction of step)"><span>Gate</span><input id="arpGate" type="range" min="0.1" max="1" step="0.05" value="0.5"></label>
+    </div>
+      </div>
     </div>
   </div>
-
-  <!-- Mod + vibrato + octave -->
-  <div class="row">
-    <label title="Pulse width (duty cycle). 0.5 = classic square.">P.W. <input id="sidPW" type="range" min="0.05" max="0.95" step="0.01" value="0.5"></label>
-    <label title="Pulse width modulation rate in Hz.">PWM Rate <input id="sidPWMRate" type="range" min="0" max="12" step="0.1" value="3"></label>
-    <label title="Pulse width modulation depth.">PWM Depth <input id="sidPWMDepth" type="range" min="0" max="0.45" step="0.01" value="0.25"></label>
-    <label title="Vibrato speed in Hz.">Vibrato Hz <input id="vibRate" type="range" min="0" max="12" step="0.1" value="5"></label>
-    <label title="Vibrato depth in cents (100 = 1 semitone).">Vibrato Amt <input id="vibAmt" type="range" min="0" max="50" step="1" value="8"></label>
-    <span class="pill" id="octPill" title=", lowers octave, . raises octave">Octave: <span id="octDisp">0</span>  &nbsp; (&lt; / &gt;)</span>
-    <button class="c64-btn" id="octDown" title="Octave down (,)">−</button>
-    <button class="c64-btn" id="octUp" title="Octave up (.)">＋</button>
-  </div>
-
-  <!-- ADSR + presets + visual -->
-  <div class="row">
-    <label title="Attack time (ms).">A <input id="sidA" type="range" min="0" max="200" step="1" value="8"></label>
-    <label title="Decay time (ms).">D <input id="sidD" type="range" min="0" max="600" step="5" value="120"></label>
-    <label title="Sustain level (0–1).">S <input id="sidS" type="range" min="0" max="1" step="0.01" value="0.5"></label>
-    <label title="Release time (ms).">R <input id="sidR" type="range" min="0" max="1200" step="10" value="240"></label>
-    <label title="ADSR preset">
-      ADSR Preset
-      <select id="adsrPreset"></select>
-    </label>
-    <div class="miniWrap">
-      <canvas id="adsrVis" class="mini" width="260" height="80" title="ADSR envelope"></canvas>
-    </div>
-  </div>
-
-  <!-- Arp + Filter buttons + presets + visual -->
-  <div class="row">
-    <label title="Chord-like fast note cycling.">Arp
-      <select id="arp" title="Arpeggiator pattern">
-        <option value="off" selected>Off</option>
-        <option value="maj">Maj (0,4,7)</option>
-        <option value="min">Min (0,3,7)</option>
-        <option value="pwr">Power (0,7,12)</option>
-      </select>
-    </label>
-    <label title="Arpeggiator rate (steps per second).">Arp Rate <input id="arpRate" type="range" min="4" max="24" step="1" value="12"></label>
-
-    <div class="c64-seg" id="filterBtns" title="Filter type">
-      <button class="segBtn active" data-filter="lowpass" title="Low‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C12 6, 18 4, 39 4"/></svg> LP
-      </button>
-      <button class="segBtn" data-filter="bandpass" title="Band‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C10 18, 15 4, 20 4 C25 4, 30 18, 39 18"/></svg> BP
-      </button>
-      <button class="segBtn" data-filter="highpass" title="High‑pass">
-        <svg viewBox="0 0 40 20"><path d="M1 18 C12 18, 18 16, 39 4"/></svg> HP
-      </button>
-      <button class="segBtn" data-filter="off" title="No filter">
-        <svg viewBox="0 0 40 20"><path d="M1 10 H39"/><path d="M4 2 L36 18"/></svg> Off
-      </button>
-    </div>
-    <label title="Filter preset">
-      Filter Preset
-      <select id="filterPreset"></select>
-    </label>
-    <label title="Filter cutoff frequency.">Cutoff <input id="sidCutoff" type="range" min="200" max="8000" step="1" value="1700"></label>
-    <label title="Filter resonance (Q).">Res (Q) <input id="sidRes" type="range" min="0.1" max="18" step="0.1" value="5"></label>
-    <label title="Adds 8‑bit style grit using a waveshaper.">Bit‑crush <input id="crush" type="checkbox" checked></label>
-    <label title="Master output volume.">Volume <input id="master" type="range" min="0" max="1" step="0.01" value="0.8"></label>
-    <div class="miniWrap">
-      <canvas id="filterVis" class="mini" width="300" height="80" title="Filter magnitude"></canvas>
-    </div>
-  </div>
-
-  <div class="note">Keys: A S D F G H J K (white) and W E T Y U (black). Octave with , and . (display shows &lt; / &gt;).</div>
-  </div>
-
-  <div class="block">
-  <div class="title">C64 Piano — Keyboard</div>
+</div>
+    <div id="middleRegion">
+      <div class="block">
+  <div class="title">C64 Piano — Keyboard<button class="cardHelp" data-help="keyboard">?</button></div>
   <div class="kbdWrap">
     <div class="kbd" id="kbd">
       <div class="key white" data-note="C" data-key="A"><span class="kLabel">C</span><span class="hint" title="Press A">A</span></div>
@@ -303,31 +415,52 @@
       <div class="key black" data-note="A#" data-key="U" style="left:calc(var(--key-w)*6 - var(--black-w)/2)"><span class="hint" title="Press U">U</span></div>
     </div>
 
-    <div class="history">
-      <div class="historyHeader">
-        <div class="historyTitle">Pattern Editor</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
-          <span class="pill" id="voiceDisp">1</span>
-          <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
-          <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
-          <label style="display:flex;align-items:center;gap:4px">Track
-            <select id="patternSel"></select>
-          </label>
-          <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
-          <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
-          <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
-          <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
-          <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
-        </div>
-      </div>
-      <div class="histList" id="histList" aria-live="polite"></div>
     </div>
-  </div>
-</div>
-
-  <div class="block">
-  <div class="title">C64‑style Drum Machine</div>
+      </div>
+      <div class="block">
+        <div class="tabBtns">
+          <button class="tabBtn active" data-tab="track">Track Editor</button>
+          <button class="tabBtn" data-tab="fx">FX</button>
+          <button class="tabBtn" data-tab="drums">Drums</button>
+        </div>
+        <div id="trackTab" class="tabContent active">
+          <div class="history">
+            <div class="historyHeader">
+              <div style="display:flex;align-items:center;gap:6px"><div class="historyTitle">Pattern Editor</div><button class="cardHelp" data-help="track">?</button></div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
+                <span class="pill" id="voiceDisp">1</span>
+                <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
+                <label style="display:flex;align-items:center;gap:4px">Track
+                  <select id="patternSel"></select>
+                </label>
+                <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
+                <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
+                <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
+                <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
+                <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
+              </div>
+            </div>
+            <div class="histList" id="histList" aria-live="polite"></div>
+          </div>
+        </div>
+        <div id="fxTab" class="tabContent">
+          <div class="row" style="align-items:center;gap:6px">
+            <label>Instrument <select id="instrumentSel"></select></label>
+            <button class="c64-btn" id="instLoadBtn">Load</button>
+            <button class="c64-btn" id="instSaveBtn">Save</button>
+            <button class="c64-btn" id="instSaveAsBtn">Save As</button>
+            <button class="cardHelp" data-help="fx">?</button>
+          </div>
+          <div class="row">
+            <label>Delay <input id="fxDelay" type="range" min="0" max="1" step="0.01" value="0"></label>
+            <label>Chorus <input id="fxChorus" type="range" min="0" max="1" step="0.01" value="0"></label>
+            <label>Bit/Crush <input id="fxCrush" type="checkbox"></label>
+            <label>Drive <input id="fxDrive" type="range" min="0" max="1" step="0.01" value="0"></label>
+          </div>
+        </div>
+        <div id="drumsTab" class="tabContent">
+  <div class="title">C64‑style Drum Machine<button class="cardHelp" data-help="drums">?</button></div>
   <div class="drums" id="drums"></div>
   <div class="transport">
     <button class="c64-btn" id="playBtn" title="Start the 16‑step sequencer">Play</button>
@@ -335,8 +468,31 @@
     <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
     <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
   </div>
-</div>
-
+        </div>
+      </div>
+    </div>
+    <div id="rightRegion">
+      <div id="trackerWrap">
+        <div class="block tracker">
+          <div class="title">Voice 1 — Track
+            <select class="trackerTrackSel" data-voice="0"></select>
+            <span class="trackerLen" id="trackerLen1"></span>
+            <button class="cardHelp" data-help="trackers">?</button>
+          </div>
+          <div id="tracker1"></div>
+        </div>
+        <div class="block tracker">
+          <div class="title">Voice 2 — Track
+            <select class="trackerTrackSel" data-voice="1"></select>
+            <span class="trackerLen" id="trackerLen2"></span>
+            <button class="cardHelp" data-help="trackers">?</button>
+          </div>
+          <div id="tracker2"></div>
+        </div>
+      </div>
+      <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -565,6 +721,7 @@ function addVoice(){
   const g=canvas.getContext('2d');
   const data=new Uint8Array(analyser.fftSize);
   const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), recording:[], activeRec:new Map(), isRecording:false, recStart:0, playTimeouts:[]};
+  voice.trackerTrack=0;
   if(state.engine==='wasm' && wasmBytes){
     const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
     node.connect(gain); voice.sidNode=node; voice.nextId=0;
@@ -584,6 +741,8 @@ function addVoice(){
   if(voices.length===1) selectVoice(0); else selectVoice(voices.length-1);
   resizeOsc();
   drawVoice(voice);
+  populateTrackerSelects();
+  renderTracker(voices.length-1);
 }
 
 function selectVoice(i){
@@ -592,6 +751,7 @@ function selectVoice(i){
   voiceDisp.textContent=currentVoice+1;
   populatePatternSelect();
   showPattern();
+  renderTracker(currentVoice);
 }
 
 
@@ -640,6 +800,7 @@ function populatePatternSelect(){
     o.textContent=i+1;
     patternSel.appendChild(o);
   }
+  populateTrackerSelects();
 }
 
 function selectedPatternIndex(){ return parseInt(patternSel.value)||0; }
@@ -649,6 +810,7 @@ function showPattern(){
   const p=v.patterns[selectedPatternIndex()]||[];
   history=[]; histList.innerHTML=''; activeHist.clear();
   p.forEach(ev=>{ if(ev.type==='note'){ const entry={note:ev.note,freq:freqFor(ev.note),oct:0,t0:ev.t0,dur:ev.dur}; history.push(entry); renderRow(history.length-1); } });
+  renderTracker(currentVoice);
 }
 
 function startRecording(){
@@ -671,6 +833,7 @@ function savePattern(){
   const v=voices[currentVoice];
   v.patterns[selectedPatternIndex()] = v.recording.slice();
   showPattern();
+  populateTrackerSelects();
 }
 
 function playSelected(){
@@ -683,7 +846,51 @@ function clearPattern(){
   const v=voices[currentVoice];
   v.patterns[selectedPatternIndex()] = [];
   history=[]; histList.innerHTML=''; activeHist.clear();
+  populateTrackerSelects();
+  renderTracker(currentVoice);
 }
+
+function populateTrackerSelects(){
+  document.querySelectorAll('.trackerTrackSel').forEach(sel=>{
+    const idx=parseInt(sel.dataset.voice);
+    const v=voices[idx];
+    sel.innerHTML='';
+    if(!v) return;
+    for(let i=0;i<v.patterns.length;i++){
+      const o=document.createElement('option');
+      o.value=i; o.textContent=i+1; sel.appendChild(o);
+    }
+    sel.value=v.trackerTrack||0;
+  });
+}
+
+function renderTracker(idx){
+  const v=voices[idx]; if(!v) return;
+  const track=v.trackerTrack||0;
+  const el=get('tracker'+(idx+1));
+  el.innerHTML='';
+  const p=v.patterns[track]||[];
+  p.forEach(ev=>{
+    if(ev.type==='note'){
+      const row=document.createElement('div');
+      row.className='trackerRow';
+      row.textContent=`${fmtNote(ev.note,0)} @ ${ev.t0.toFixed(2)}s`;
+      el.appendChild(row);
+    }
+  });
+  const len=p.reduce((m,ev)=>ev.type==='note'?Math.max(m,ev.t0+(ev.dur||0)):m,0);
+  const lenEl=get('trackerLen'+(idx+1));
+  if(lenEl) lenEl.textContent=`Len ${len.toFixed(2)}s`;
+}
+
+document.querySelectorAll('.trackerTrackSel').forEach(sel=>{
+  sel.addEventListener('change',()=>{
+    const idx=parseInt(sel.dataset.voice);
+    const v=voices[idx];
+    v.trackerTrack=parseInt(sel.value);
+    renderTracker(idx);
+  });
+});
 
 prevVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice-1));
 nextVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice+1));
@@ -695,6 +902,54 @@ saveBtn.addEventListener('click', savePattern);
 patternSel.addEventListener('change', showPattern);
 get('addVoiceBtn').addEventListener('click', addVoice);
 addVoice();
+populateTrackerSelects();
+renderTracker(0);
+
+document.querySelectorAll('.tabBtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const tab=btn.dataset.tab;
+    document.querySelectorAll('.tabBtn').forEach(b=>b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.tabContent').forEach(c=>c.classList.toggle('active', c.id===tab+'Tab'));
+  });
+});
+
+function attachNumberInputs(){
+  document.querySelectorAll('input[type=range]').forEach(r=>{
+    if(r.dataset.num) return;
+    const num=document.createElement('input');
+    num.type='number';
+    num.min=r.min; num.max=r.max; num.step=r.step; num.value=r.value;
+    num.className='numField';
+    const wrap=document.createElement('div'); wrap.className='sliderWrap';
+    r.parentNode.insertBefore(wrap,r);
+    wrap.appendChild(r); wrap.appendChild(num);
+    r.dataset.num='1';
+    r.addEventListener('input',()=>num.value=r.value);
+    num.addEventListener('input',()=>{ r.value=num.value; r.dispatchEvent(new Event('input'));});
+  });
+}
+attachNumberInputs();
+
+let instruments=JSON.parse(localStorage.getItem('instruments')||'{}');
+const instSel=get('instrumentSel');
+const instName=get('instName');
+function populateInstrumentSelect(){
+  if(!instSel) return;
+  instSel.innerHTML='';
+  Object.keys(instruments).forEach(name=>{
+    const o=document.createElement('option'); o.value=name; o.textContent=name; instSel.appendChild(o);
+  });
+}
+populateInstrumentSelect();
+function updateInstName(){ if(instName) instName.textContent=instSel.value||'Default'; }
+if(instSel){ instSel.addEventListener('change', updateInstName); updateInstName(); }
+
+get('instLoadBtn').addEventListener('click',()=>{ const p=instruments[instSel.value]; if(p) applyParams(p); });
+get('instSaveBtn').addEventListener('click',()=>{ const name=instSel.value||prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; updateInstName(); });
+get('instSaveAsBtn').addEventListener('click',()=>{ const name=prompt('Instrument name?'); if(!name) return; instruments[name]=snapshotParams(); localStorage.setItem('instruments',JSON.stringify(instruments)); populateInstrumentSelect(); instSel.value=name; updateInstName(); });
+
+const openFx=get('openFx');
+if(openFx){ openFx.addEventListener('click',()=>{ const btn=document.querySelector('.tabBtn[data-tab="fx"]'); if(btn) btn.click(); }); }
 
 function playPattern(v, pattern){
   if(ctx.state!=='running') return;
@@ -801,10 +1056,15 @@ let crusher = makeCrusher(8);
 // Base note frequencies (A4=440)
 const baseFreq = { 'C':261.63,'C#':277.18,'D':293.66,'D#':311.13,'E':329.63,'F':349.23,'F#':369.99,'G':392.00,'G#':415.30,'A':440.00,'A#':466.16,'B':493.88,'C2':523.25 };
 let octave = 0; // -3..+3
-const octDisp = get('octDisp'); const octPill = get('octPill');
-function updateOct(n){ octave = Math.max(-3, Math.min(3, n)); if(octDisp) octDisp.textContent = octave; if(octPill){ octPill.classList.add('glow'); setTimeout(()=>octPill.classList.remove('glow'), 160); } }
+const octBtns = [...document.querySelectorAll('#octBtns button')];
+function updateOct(n){
+  octave = Math.max(-3, Math.min(3, n));
+  octBtns.forEach(btn=>btn.classList.toggle('active', Number(btn.dataset.oct)===octave));
+}
+octBtns.forEach(btn=>btn.addEventListener('click', ()=>updateOct(Number(btn.dataset.oct))));
 get('octDown').addEventListener('click', ()=>updateOct(octave-1));
 get('octUp').addEventListener('click', ()=>updateOct(octave+1));
+updateOct(0);
 
 function freqFor(note){ return (typeof note === 'number') ? note : baseFreq[note] * Math.pow(2, octave); }
 
@@ -814,7 +1074,7 @@ function makePulseWave(duty=0.5, harmonics=64){ duty=Math.min(0.98,Math.max(0.02
 // ======= Presets =======
 const wavePresets = {
   pulse: {
-    'Init': { pw:0.5, pwmRate:0, pwmDepth:0, vibRate:0, vibAmt:0 },
+    'Init': { pw:0.5, pwmRate:3, pwmDepth:0.25, vibRate:5, vibAmt:8 },
     'PWM Lead': { pw:0.5, pwmRate:3, pwmDepth:0.25, vibRate:5, vibAmt:8 },
     'Chiptune Bass': { pw:0.25, pwmRate:0.6, pwmDepth:0.08, vibRate:0, vibAmt:0 },
     'Detuned PWM': { pw:0.45, pwmRate:5, pwmDepth:0.35, vibRate:7, vibAmt:12 },
@@ -876,11 +1136,12 @@ function populateWavePresets(){
 
 function applyWavePreset(){
   const sel = get('wavePreset'); const p = (wavePresets[state.wave]||{})[sel.value]||{};
-  if(p.pw!=null) get('sidPW').value=p.pw;
-  if(p.pwmRate!=null) get('sidPWMRate').value=p.pwmRate;
-  if(p.pwmDepth!=null) get('sidPWMDepth').value=p.pwmDepth;
-  if(p.vibRate!=null) get('vibRate').value=p.vibRate;
-  if(p.vibAmt!=null) get('vibAmt').value=p.vibAmt;
+  const setVal=(id,val)=>{ if(val!=null){ const el=get(id); if(el){ el.value=val; el.dispatchEvent(new Event('input')); }} };
+  setVal('sidPW',p.pw);
+  setVal('sidPWMRate',p.pwmRate);
+  setVal('sidPWMDepth',p.pwmDepth);
+  setVal('vibRate',p.vibRate);
+  setVal('vibAmt',p.vibAmt);
   updateWaveVis();
 }
 
@@ -928,19 +1189,20 @@ function snapshotParams(){
 
 function applyParams(p){
   if(!p) return;
+  const setVal=(id,val)=>{ const el=get(id); if(el!=null && val!=null){ el.value=val; el.dispatchEvent(new Event('input')); } };
   setWaveButtons(p.wave||'pulse');
-  get('sidPW').value=p.pw;
-  get('sidPWMRate').value=p.pwmRate;
-  get('sidPWMDepth').value=p.pwmDepth;
-  get('vibRate').value=p.vibRate;
-  get('vibAmt').value=p.vibAmt;
-  get('sidA').value=p.A;
-  get('sidD').value=p.D;
-  get('sidS').value=p.S;
-  get('sidR').value=p.R;
+  setVal('sidPW',p.pw);
+  setVal('sidPWMRate',p.pwmRate);
+  setVal('sidPWMDepth',p.pwmDepth);
+  setVal('vibRate',p.vibRate);
+  setVal('vibAmt',p.vibAmt);
+  setVal('sidA',p.A);
+  setVal('sidD',p.D);
+  setVal('sidS',p.S);
+  setVal('sidR',p.R);
   setFilterButtons(p.filter||'off');
-  get('sidCutoff').value=p.cutoff;
-  get('sidRes').value=p.res;
+  setVal('sidCutoff',p.cutoff);
+  setVal('sidRes',p.res);
   if(get('crush')) get('crush').checked=p.crush;
   master.gain.value=p.master;
   if(state.engine==='wasm'){
@@ -964,24 +1226,39 @@ function applyADSRPreset(){
 // ======= Visuals =======
 function clearCanvas(c){ const g=c.getContext('2d'); g.clearRect(0,0,c.width,c.height); return g; }
 
+let waveAnimId=null;
 function updateWaveVis(){
-  const c=get('waveVis'); if(!c) return; const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2; g.beginPath();
-  const wave=state.wave; const pw=parseFloat(get('sidPW').value);
-  if(wave==='pulse'){
-    const y1=10, y2=h-10; const midX=w*pw; g.moveTo(5,(y1+y2)/2); g.lineTo(midX, y1); g.lineTo(midX, y2); g.lineTo(w-5, y2); 
-  } else if(wave==='sawtooth'){
-    g.moveTo(5,h-10); g.lineTo(w-5,10); g.moveTo(5,h-10); g.lineTo(5,10);
-  } else if(wave==='triangle'){
-    g.moveTo(5,h-10); g.lineTo(w*0.5,10); g.lineTo(w-5,h-10);
-  } else { // noise
-    g.moveTo(5, h/2);
-    for(let x=5;x<=w-5;x+=4){ const y=10 + Math.random()*(h-20); g.lineTo(x,y); }
-  }
-  g.stroke();
+  if(waveAnimId) cancelAnimationFrame(waveAnimId);
+  (function loop(){
+    const c=get('waveVis');
+    if(!c){ waveAnimId=null; return; }
+    c.width=c.clientWidth;
+    c.height=c.clientHeight;
+    const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2; g.beginPath();
+    const wave=state.wave; let pw=parseFloat(get('sidPW').value); const depth=parseFloat(get('sidPWMDepth').value||0); const rate=parseFloat(get('sidPWMRate').value||0);
+    if(wave==='pulse'){
+      const t=performance.now()/1000; pw+=depth*Math.sin(2*Math.PI*rate*t); pw=Math.max(0.05,Math.min(0.95,pw));
+      const y1=10, y2=h-10; const x=w*pw;
+      g.moveTo(5,(y1+y2)/2);
+      g.lineTo(x, y1);
+      g.lineTo(x, y2);
+      g.lineTo(w-5, y2);
+      g.lineTo(w-5, y1);
+    } else if(wave==='sawtooth'){
+      g.moveTo(5,h-10); g.lineTo(w-5,10); g.moveTo(5,h-10); g.lineTo(5,10);
+    } else if(wave==='triangle'){
+      g.moveTo(5,h-10); g.lineTo(w*0.5,10); g.lineTo(w-5,h-10);
+    } else { // noise
+      g.moveTo(5, h/2);
+      for(let x=5;x<=w-5;x+=4){ const y=10 + Math.random()*(h-20); g.lineTo(x,y); }
+    }
+    g.stroke();
+    waveAnimId=requestAnimationFrame(loop);
+  })();
 }
 
 function updateFilterVis(){
-  const c=get('filterVis'); if(!c) return; const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2;
+  const c=get('filterVis'); if(!c) return; c.width=c.clientWidth; c.height=c.clientHeight; const g=clearCanvas(c); const w=c.width, h=c.height; g.strokeStyle='#d6e0ff'; g.lineWidth=2;
   if(state.filter==='off'){ g.beginPath(); g.moveTo(5,h/2); g.lineTo(w-5,h/2); g.stroke(); return; }
   const biq=ctx.createBiquadFilter(); biq.type=state.filter; biq.Q.value=valNum('sidRes',5); biq.frequency.value=valNum('sidCutoff',1700);
   const N=256; const freq=new Float32Array(N); const mag=new Float32Array(N); const phase=new Float32Array(N);
@@ -1038,8 +1315,38 @@ function createSIDVoice(note, voice=voices[currentVoice]){
   // Vibrato
   let vib=null; if(osc && vibAmt>0 && vibRate>0){ vib=ctx.createOscillator(); vib.type='sine'; vib.frequency.value=vibRate; const g=ctx.createGain(); g.gain.value=vibAmt; vib.connect(g); g.connect(osc.detune); vib.start(now); }
   // Arpeggiator
-  let arpTimer=null; const arpMode=(get('arp')?get('arp').value:'off'); const arpRate=valNum('arpRate',12); const arpPatterns={off:[0], maj:[0,4,7], min:[0,3,7], pwr:[0,7,12]};
-  if(osc && arpPatterns[arpMode] && arpPatterns[arpMode].length>1){ let idx=0; const interval=Math.max(20, 1000*(1/arpRate)); arpTimer=setInterval(()=>{ const semis=arpPatterns[arpMode][idx%arpPatterns[arpMode].length]; const ff=f*Math.pow(2, semis/12); osc.frequency.setValueAtTime(ff, ctx.currentTime); idx++; }, interval); }
+  let arpTimer=null;
+  const arpModeEl=document.querySelector('#arpModeBtns .active');
+  const arpMode=arpModeEl?arpModeEl.dataset.mode:'off';
+  const arpRate=valNum('arpRate',12);
+  const arpGate=valNum('arpGate',0.5);
+  const arpPatterns={
+    off:[0],
+    up:[0,4,7,12],
+    down:[12,7,4,0],
+    updown:[0,4,7,4],
+    random:[0,4,7,12]
+  };
+  if(osc && arpMode!=='off'){
+    let idx=0;
+    const interval=Math.max(20, 1000*(1/arpRate));
+    arpTimer=setInterval(()=>{
+      let semis;
+      if(arpMode==='random'){
+        const arr=arpPatterns.random;
+        semis=arr[Math.floor(Math.random()*arr.length)];
+      } else {
+        const arr=arpPatterns[arpMode];
+        semis=arr[idx%arr.length];
+        idx++;
+      }
+      const ff=f*Math.pow(2, semis/12);
+      osc.frequency.setValueAtTime(ff, ctx.currentTime);
+      vca.gain.cancelScheduledValues(ctx.currentTime);
+      vca.gain.setValueAtTime(1, ctx.currentTime);
+      vca.gain.setTargetAtTime(0.0001, ctx.currentTime + interval*arpGate, 0.01);
+    }, interval);
+  }
 
   source.start(now);
   return { stop:()=>{ const t=ctx.currentTime; vca.gain.setTargetAtTime(0.0001,t,Math.max(0.01,R)); source.stop(t+R+0.03); if(pwmTimer) clearInterval(pwmTimer); if(vib) vib.stop(t+0.01); if(arpTimer) clearInterval(arpTimer); } };
@@ -1133,7 +1440,7 @@ get('master').addEventListener('input', e=>{
 // ======= Drum machine =======
 const drumGrid=get('drums');
 const steps=16; const rowInstruments=['Snare','Kick','Hat','Tom'];
-const instruments=['Kick','Snare','Hat','Tom','Clap','Cowbell'];
+const drumInstruments=['Kick','Snare','Hat','Tom','Clap','Cowbell'];
 const pattern={0:Array(steps).fill(false),1:Array(steps).fill(false),2:Array(steps).fill(false),3:Array(steps).fill(false)};
 
 function buildGrid(){
@@ -1145,7 +1452,7 @@ function buildGrid(){
   for(let r=0;r<4;r++){
     const left=document.createElement('div'); left.className='rowLbl';
     const tag=document.createElement('span'); tag.className='keytag'; tag.textContent=['Z','X','C','V'][r]; left.appendChild(tag);
-    const sel=document.createElement('select'); sel.className='drumSel'; sel.title='Choose the drum sound for this row'; instruments.forEach(n=>{ const o=document.createElement('option'); o.textContent=n; if(n===rowInstruments[r]) o.selected=true; sel.appendChild(o); }); sel.addEventListener('change',()=>{ rowInstruments[r]=sel.value; }); left.appendChild(sel);
+    const sel=document.createElement('select'); sel.className='drumSel'; sel.title='Choose the drum sound for this row'; drumInstruments.forEach(n=>{ const o=document.createElement('option'); o.textContent=n; if(n===rowInstruments[r]) o.selected=true; sel.appendChild(o); }); sel.addEventListener('change',()=>{ rowInstruments[r]=sel.value; }); left.appendChild(sel);
     drumGrid.appendChild(left);
     for(let i=0;i<steps;i++){ const cell=document.createElement('div'); cell.className='step'; cell.title=`Step ${i+1} (click to toggle)`; if(pattern[r][i]) cell.classList.add('on'); cell.addEventListener('click',()=>{ pattern[r][i]=!pattern[r][i]; cell.classList.toggle('on'); }); drumGrid.appendChild(cell); }
   }
@@ -1195,6 +1502,13 @@ Array.from(document.querySelectorAll('#filterBtns .segBtn')).forEach(btn=>{
 });
 populateFilterPresets();
 get('filterPreset').addEventListener('change', applyFilterPreset);
+// Arp mode buttons
+Array.from(document.querySelectorAll('#arpModeBtns .segBtn')).forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#arpModeBtns .segBtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
 // Engine buttons
 Array.from(document.querySelectorAll('#engineBtns .segBtn')).forEach(btn=>{
   btn.addEventListener('click', ()=>{ setEngine(btn.dataset.eng); });
@@ -1215,6 +1529,41 @@ updateADSRVis();
 // Initial visuals
 updateWaveVis(); updateFilterVis(); updateADSRVis();
 initBootIntro();
+
+// Help modal
+const helpBtn=get('helpBtn');
+const helpModal=get('helpModal');
+const helpClose=get('helpClose');
+let helpPopup=null;
+function openHelp(section, anchor){
+  if(section && anchor){
+    if(helpPopup) helpPopup.remove();
+    const src=document.querySelector('#help-'+section);
+    if(!src) return;
+    const pop=document.createElement('div');
+    pop.className='helpPopup';
+    pop.innerHTML=src.innerHTML;
+    document.body.appendChild(pop);
+    const rect=anchor.getBoundingClientRect();
+    pop.style.left=(rect.right+8+window.scrollX)+'px';
+    pop.style.top=(rect.top+window.scrollY)+'px';
+    helpPopup=pop;
+    const close=e=>{ if(!pop.contains(e.target) && e.target!==anchor){ pop.remove(); helpPopup=null; document.removeEventListener('click',close); }};
+    setTimeout(()=>document.addEventListener('click', close));
+  }else{
+    if(helpPopup){ helpPopup.remove(); helpPopup=null; }
+    helpModal.classList.add('show');
+  }
+}
+function closeHelp(){
+  helpModal.classList.remove('show');
+}
+if(helpBtn && helpModal && helpClose){
+  helpBtn.addEventListener('click', ()=>openHelp());
+  helpClose.addEventListener('click', closeHelp);
+  helpModal.addEventListener('click', e=>{ if(e.target===helpModal) closeHelp(); });
+  document.querySelectorAll('.cardHelp').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); openHelp(b.dataset.help, b); }));
+}
 </script>
 </body>
 </html>
