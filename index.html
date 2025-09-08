@@ -159,6 +159,7 @@
   .history{flex:1; min-height:0; width:100%; height:100%; border:2px solid var(--c64-border); border-radius:12px; padding:10px; background:linear-gradient(180deg, rgba(0,0,0,0.08), rgba(255,255,255,0.04)); display:flex; flex-direction:column; box-shadow:0 10px 24px rgba(0,0,0,0.25) inset}
   .historyHeader{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
   .historyTitle{font-size:13px; font-weight:800}
+  .voiceBtn.active{background:#08f;color:#fff;}
   .patternGrid{flex:1; min-height:0; width:100%; overflow:auto; display:grid; grid-template-columns:repeat(16,1fr); grid-auto-rows:24px; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px; position:relative;}
   .patternCell{border:1px solid var(--c64-border);}
   .patternNote{background:rgba(0,128,255,0.5); border:1px solid #08f; z-index:10; cursor:move; position:relative;}
@@ -193,7 +194,7 @@
   .step{width:28px; height:28px; border:1px solid var(--c64-border); border-radius:8px; background:linear-gradient(180deg, rgba(169,187,255,0.2), rgba(20,30,90,0.25)); display:grid; place-items:center; cursor:pointer; transition:filter .15s ease, transform .05s ease}
   .step:hover{filter:brightness(1.1)}
   .step:active{transform:translateY(1px)}
-  .step.on{background:linear-gradient(180deg, rgba(169,187,255,0.45), rgba(20,30,90,0.35))}
+  .step.on{background:#08f; border-color:#08f;}
   .colHdr{font-size:10px; color:#cfd7ff; text-align:center}
   .playing{box-shadow:0 0 0 2px #222 inset, 0 0 12px var(--glow)}
   .transport{display:flex; gap:10px; align-items:center; margin-top:10px}
@@ -264,8 +265,8 @@
       <button class="c64-btn" id="saveAsBtnTop">Save As</button>
       <button class="c64-btn" id="helpBtn" title="Show help">Help</button>
       <div class="transport" style="margin-left:auto">
-        <button class="c64-btn" id="transportPlay">Play</button>
-        <button class="c64-btn" id="transportStop">Stop</button>
+        <button class="c64-btn" id="transportPlay" title="Play">▶</button>
+        <button class="c64-btn" id="transportStop" title="Stop">■</button>
         <span class="pill" id="transportStatus">●</span>
       </div>
     </div>
@@ -425,16 +426,15 @@
         <div class="tabBtns">
           <button class="tabBtn active" data-tab="track">Track Editor</button>
           <button class="tabBtn" data-tab="fx">FX</button>
-          <button class="tabBtn" data-tab="drums">Drums</button>
         </div>
         <div id="trackTab" class="tabContent active">
           <div class="history">
             <div class="historyHeader">
               <div style="display:flex;align-items:center;gap:6px"><div class="historyTitle">Pattern Editor</div><button class="cardHelp" data-help="track">?</button></div>
-              <div style="display:flex;gap:6px;align-items:center">
-                <button class="c64-btn" id="voicePrev" title="Previous voice">◀</button>
-                <span class="pill" id="voiceDisp">1</span>
-                <button class="c64-btn" id="voiceNext" title="Next voice">▶</button>
+              <div style="display:flex;gap:6px;align-items:center" id="voiceBtns">
+                <button class="c64-btn voiceBtn active" data-voice="0" title="Track 1">1</button>
+                <button class="c64-btn voiceBtn" data-voice="1" title="Track 2">2</button>
+                <button class="c64-btn voiceBtn" data-voice="2" title="Drums">3</button>
                 <label style="display:flex;align-items:center;gap:4px">Track
                   <select id="patternSel"></select>
                 </label>
@@ -449,9 +449,9 @@
                 </label>
                 <button class="c64-btn" id="savePatternBtn" title="Save pattern to track">Save</button>
                 <button class="c64-btn" id="loadPatternBtn" title="Load pattern by name">Load</button>
-                <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
-                <button class="c64-btn" id="stopPatternBtn" title="Stop playback">Stop</button>
-                <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
+                <button class="c64-btn" id="playPatternBtn" title="Play selected track">▶</button>
+                <button class="c64-btn" id="stopPatternBtn" title="Stop playback">■</button>
+                <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">✖</button>
               </div>
             </div>
             <div class="patternGrid" id="patternGrid" role="grid"></div>
@@ -475,10 +475,18 @@
         </div>
         <div id="drumsTab" class="tabContent">
   <div class="title">C64‑style Drum Machine<button class="cardHelp" data-help="drums">?</button></div>
+  <div class="row" style="display:flex;gap:6px;align-items:center;margin-top:6px">
+    <label style="display:flex;align-items:center;gap:4px">Track
+      <select id="drumPatternSel"></select>
+    </label>
+    <button class="c64-btn" id="saveDrumBtn" title="Save drum track">Save</button>
+    <button class="c64-btn" id="loadDrumBtn" title="Load drum track">Load</button>
+    <button class="c64-btn" id="clearDrumBtn" title="Clear drum track">✖</button>
+    <button class="c64-btn" id="playDrumBtn" title="Play drums">▶</button>
+    <button class="c64-btn" id="stopDrumBtn" title="Stop drums">■</button>
+  </div>
   <div class="drums" id="drums"></div>
   <div class="transport">
-    <button class="c64-btn" id="playBtn" title="Start the 16‑step sequencer">Play</button>
-    <button class="c64-btn" id="stopBtn" title="Stop and clear the playhead highlight">Stop</button>
     <label title="Beats per minute. 16th notes are steps.">Tempo <input id="bpm" type="range" min="60" max="180" step="1" value="120"></label>
     <span style="font-size:12px;opacity:.9">Trigger now: Z/X/C/V</span>
   </div>
@@ -504,7 +512,6 @@
           <div id="tracker2"></div>
         </div>
       </div>
-      <button class="c64-btn" id="addVoiceBtn" title="Add voice">＋</button>
     </div>
   </div>
 </div>
@@ -760,9 +767,17 @@ function addVoice(){
 }
 
 function selectVoice(i){
+  if(i===2){
+    voiceBtns.forEach(b=>b.classList.toggle('active', parseInt(b.dataset.voice)===2));
+    document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tabContent').forEach(c=>c.classList.toggle('active', c.id==='drumsTab'));
+    return;
+  }
   if(voices.length===0) return;
   currentVoice=(i+voices.length)%voices.length;
-  voiceDisp.textContent=currentVoice+1;
+  voiceBtns.forEach(b=>b.classList.toggle('active', parseInt(b.dataset.voice)===currentVoice));
+  document.querySelectorAll('.tabBtn').forEach(b=>b.classList.toggle('active', b.dataset.tab==='track'));
+  document.querySelectorAll('.tabContent').forEach(c=>c.classList.toggle('active', c.id==='trackTab'));
   populatePatternSelect();
   showPattern();
   renderTracker(currentVoice);
@@ -775,9 +790,7 @@ const clearBtn = get('clearPatternBtn');
 const saveBtn = get('savePatternBtn');
 const loadBtn = get('loadPatternBtn');
 const patternSel = get('patternSel');
-const voiceDisp = get('voiceDisp');
-const prevVoiceBtn = get('voicePrev');
-const nextVoiceBtn = get('voiceNext');
+const voiceBtns = document.querySelectorAll('#voiceBtns .voiceBtn');
 const stepResSel = get('stepResSel');
 const patternLenInput = get('patternLen');
 const patternStatus = get('patternStatus');
@@ -791,6 +804,10 @@ let cursor={row:0,col:0};
 const noteOrder = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 let patternRows = 12, patternCols = 16;
 let drag = null; // current drag state
+
+function removeOverlaps(entry){
+  history = history.filter(h=>h===entry || h.start>=entry.start+entry.dur || entry.start>=h.start+h.dur);
+}
 
 function gridCols(){
   return (parseInt(stepResSel.value)||16) * (parseInt(patternLenInput.value)||1);
@@ -947,14 +964,17 @@ function onMouseUp(){
   if(drag.mode==='create'){
     const noteName=noteOrder[drag.startRow];
     const entry={note:noteName,row:drag.startRow,start:drag.startCol,dur:drag.dur};
-    const idx=history.push(entry)-1;
-    drag.el.dataset.index=idx;
+    history.push(entry);
+    removeOverlaps(entry);
+    drag.el.dataset.index=history.indexOf(entry);
   }else if(drag.mode==='move'){
     const h=history[drag.index];
     h.row=drag.row; h.start=drag.col; h.note=noteOrder[drag.row];
+    removeOverlaps(h);
   }else if(drag.mode==='resize'){
     const h=history[drag.index];
     h.dur=drag.dur;
+    removeOverlaps(h);
   }
   drag=null;
   document.removeEventListener('mousemove', onMouseMove);
@@ -965,7 +985,9 @@ function onMouseUp(){
 function insertNoteAtCursor(){
   const existing=history.find(h=>h.row===cursor.row && cursor.col>=h.start && cursor.col<h.start+h.dur);
   if(!existing){
-    history.push({note:noteOrder[cursor.row], row:cursor.row, start:cursor.col, dur:1});
+    const entry={note:noteOrder[cursor.row], row:cursor.row, start:cursor.col, dur:1};
+    history.push(entry);
+    removeOverlaps(entry);
     renderPattern();
   }
 }
@@ -980,8 +1002,8 @@ function deleteNoteAtCursor(){
 
 patternGrid.addEventListener('mousedown', startDrag);
 
-stepResSel.addEventListener('change', ()=>buildPatternGrid());
-patternLenInput.addEventListener('input', ()=>buildPatternGrid());
+stepResSel.addEventListener('change', ()=>{ buildPatternGrid(); buildGrid(); });
+patternLenInput.addEventListener('input', ()=>{ buildPatternGrid(); buildGrid(); });
 
 buildPatternGrid();
 
@@ -1098,18 +1120,32 @@ document.querySelectorAll('.trackerTrackSel').forEach(sel=>{
   });
 });
 
-prevVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice-1));
-nextVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice+1));
+voiceBtns.forEach(btn=>{
+  btn.addEventListener('click',()=>selectVoice(parseInt(btn.dataset.voice)));
+});
 stopBtn.addEventListener('click', ()=>{ stopPlayback(voices[currentVoice]); });
 playBtn.addEventListener('click', playSelected);
 clearBtn.addEventListener('click', clearPattern);
 saveBtn.addEventListener('click', savePattern);
 loadBtn.addEventListener('click', loadPatternByName);
 patternSel.addEventListener('change', showPattern);
-get('addVoiceBtn').addEventListener('click', addVoice);
 addVoice();
+addVoice();
+selectVoice(0);
 populateTrackerSelects();
 renderTracker(0);
+renderTracker(1);
+
+const transportPlay = get('transportPlay');
+const transportStop = get('transportStop');
+transportPlay.addEventListener('click',()=>{
+  voices.forEach(v=>{ const idx=v.trackerTrack||0; playPattern(v, v.patterns[idx]); });
+  playDrums();
+});
+transportStop.addEventListener('click',()=>{
+  voices.forEach(stopPlayback);
+  stopDrums();
+});
 
 document.addEventListener('keydown', e=>{
   if(!document.getElementById('trackTab').classList.contains('active')) return;
@@ -1640,25 +1676,82 @@ get('master').addEventListener('input', e=>{
 
 // ======= Drum machine =======
 const drumGrid=get('drums');
-const steps=16; const rowInstruments=['Snare','Kick','Hat','Tom'];
+let drumSteps=gridCols();
+let rowInstruments=['Snare','Kick','Hat','Tom'];
 const drumInstruments=['Kick','Snare','Hat','Tom','Clap','Cowbell'];
-const pattern={0:Array(steps).fill(false),1:Array(steps).fill(false),2:Array(steps).fill(false),3:Array(steps).fill(false)};
+let pattern={0:Array(drumSteps).fill(false),1:Array(drumSteps).fill(false),2:Array(drumSteps).fill(false),3:Array(drumSteps).fill(false)};
+const drumPatterns=Array(8).fill(0).map(()=>({pattern:null,instruments:null,steps:drumSteps}));
+const drumPatternNames=Array(8).fill(0).map((_,i)=>'Drum '+(i+1));
+let drumIndex=0;
 
 function buildGrid(){
+  drumSteps=gridCols();
+  for(let r=0;r<4;r++){
+    pattern[r]=pattern[r]||[];
+    if(pattern[r].length<drumSteps) pattern[r]=pattern[r].concat(Array(drumSteps-pattern[r].length).fill(false));
+    else pattern[r]=pattern[r].slice(0,drumSteps);
+  }
   drumGrid.innerHTML='';
-  // Header
   drumGrid.appendChild(Object.assign(document.createElement('div'),{className:'hdr'}));
-  for(let i=0;i<steps;i++){ const h=document.createElement('div'); h.className='hdr colHdr'; h.textContent=(i+1); drumGrid.appendChild(h); }
-  // Rows
+  for(let i=0;i<drumSteps;i++){ const h=document.createElement('div'); h.className='hdr colHdr'; h.textContent=(i+1); drumGrid.appendChild(h); }
   for(let r=0;r<4;r++){
     const left=document.createElement('div'); left.className='rowLbl';
     const tag=document.createElement('span'); tag.className='keytag'; tag.textContent=['Z','X','C','V'][r]; left.appendChild(tag);
     const sel=document.createElement('select'); sel.className='drumSel'; sel.title='Choose the drum sound for this row'; drumInstruments.forEach(n=>{ const o=document.createElement('option'); o.textContent=n; if(n===rowInstruments[r]) o.selected=true; sel.appendChild(o); }); sel.addEventListener('change',()=>{ rowInstruments[r]=sel.value; }); left.appendChild(sel);
     drumGrid.appendChild(left);
-    for(let i=0;i<steps;i++){ const cell=document.createElement('div'); cell.className='step'; cell.title=`Step ${i+1} (click to toggle)`; if(pattern[r][i]) cell.classList.add('on'); cell.addEventListener('click',()=>{ pattern[r][i]=!pattern[r][i]; cell.classList.toggle('on'); }); drumGrid.appendChild(cell); }
+    for(let i=0;i<drumSteps;i++){ const cell=document.createElement('div'); cell.className='step'; cell.title=`Step ${i+1} (click to toggle)`; if(pattern[r][i]) cell.classList.add('on'); cell.addEventListener('click',()=>{ const on=pattern[r][i]; for(let rr=0;rr<4;rr++) pattern[rr][i]=false; if(!on) pattern[r][i]=true; const cells=drumGrid.querySelectorAll('.step'); for(let rr=0;rr<4;rr++){ cells[rr*drumSteps+i].classList.toggle('on', !on && rr===r); } }); drumGrid.appendChild(cell); }
   }
 }
+function populateDrumSelect(){
+  const sel=get('drumPatternSel');
+  sel.innerHTML='';
+  drumPatternNames.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=n; sel.appendChild(o); });
+  sel.value=drumIndex;
+}
+function showDrumPattern(){
+  const data=drumPatterns[drumIndex];
+  if(data && data.pattern){
+    drumSteps=data.steps||gridCols();
+    pattern=JSON.parse(JSON.stringify(data.pattern));
+    rowInstruments=[...data.instruments];
+  }else{
+    drumSteps=gridCols();
+    pattern={0:Array(drumSteps).fill(false),1:Array(drumSteps).fill(false),2:Array(drumSteps).fill(false),3:Array(drumSteps).fill(false)};
+    rowInstruments=['Snare','Kick','Hat','Tom'];
+  }
+  buildGrid();
+}
+function saveDrumPattern(){
+  const idx=drumIndex;
+  const name=prompt('Drum track name?', drumPatternNames[idx]||'');
+  if(name===null) return;
+  drumPatternNames[idx]=name||('Drum '+(idx+1));
+  drumPatterns[idx]={pattern:JSON.parse(JSON.stringify(pattern)), instruments:[...rowInstruments], steps:drumSteps};
+  populateDrumSelect();
+}
+function loadDrumPatternByName(){
+  const name=prompt('Load drum track name?', drumPatternNames.join(', '));
+  if(!name) return;
+  const idx=drumPatternNames.indexOf(name);
+  if(idx>=0){ drumIndex=idx; populateDrumSelect(); showDrumPattern(); }
+}
+function clearDrumPattern(){
+  for(let r=0;r<4;r++) pattern[r].fill(false);
+  buildGrid();
+}
+function playDrums(){ start(); }
+function stopDrums(){ stop(); }
+
 buildGrid();
+populateDrumSelect();
+showDrumPattern();
+
+get('drumPatternSel').addEventListener('change',()=>{ drumIndex=parseInt(get('drumPatternSel').value); showDrumPattern(); });
+get('saveDrumBtn').addEventListener('click', saveDrumPattern);
+get('loadDrumBtn').addEventListener('click', loadDrumPatternByName);
+get('clearDrumBtn').addEventListener('click', clearDrumPattern);
+get('playDrumBtn').addEventListener('click', playDrums);
+get('stopDrumBtn').addEventListener('click', stopDrums);
 
 // Drum synths
 function playKick(t){ const o=ctx.createOscillator(); o.type='triangle'; const g=ctx.createGain(); g.gain.setValueAtTime(1,t); o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(45,t+0.12); g.gain.exponentialRampToValueAtTime(0.001,t+0.18); o.connect(g); g.connect(master); o.start(t); o.stop(t+0.2); }
@@ -1673,12 +1766,9 @@ function triggerDrum(name,t){
 }
 
 let isPlaying=false, currStep=0, schedId=null, lastSchedule=0;
-function schedule(){ const bpm=valNum('bpm',120); const secPerStep=(60/bpm)/4; const lookahead=0.1; const now=ctx.currentTime; while(lastSchedule < now+lookahead){ for(let r=0;r<4;r++){ if(pattern[r][currStep]) triggerDrum(rowInstruments[r], lastSchedule); } // highlight
- const cells=drumGrid.querySelectorAll('.step'); cells.forEach((c,i)=>{ const col=i%steps; c.classList.toggle('playing', col===currStep); }); currStep=(currStep+1)%steps; lastSchedule+=secPerStep; } }
+function schedule(){ const secPerStep=stepSeconds(); const lookahead=0.1; const now=ctx.currentTime; while(lastSchedule < now+lookahead){ for(let r=0;r<4;r++){ if(pattern[r][currStep]) triggerDrum(rowInstruments[r], lastSchedule); } const cells=drumGrid.querySelectorAll('.step'); cells.forEach((c,i)=>{ const col=i%drumSteps; c.classList.toggle('playing', col===currStep); }); currStep=(currStep+1)%drumSteps; lastSchedule+=secPerStep; } }
 function start(){ if(isPlaying) return; isPlaying=true; currStep=0; lastSchedule=ctx.currentTime; schedId=setInterval(schedule,25); }
 function stop(){ if(!isPlaying) return; isPlaying=false; clearInterval(schedId); schedId=null; drumGrid.querySelectorAll('.step').forEach(c=>c.classList.remove('playing')); }
-
-document.getElementById('playBtn').addEventListener('click',start); document.getElementById('stopBtn').addEventListener('click',stop);
 
 // Keyboard triggers for drums
 const drumKeyMap={z:0,x:1,c:2,v:3};
