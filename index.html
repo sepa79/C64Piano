@@ -156,7 +156,7 @@
   .key.active { background: #ff8080 !important; }
 
   /* History panel */
-  .history{min-width:260px; max-width:340px; height:calc(var(--key-h) + 24px); border:2px solid var(--c64-border); border-radius:12px; padding:10px; background:linear-gradient(180deg, rgba(0,0,0,0.08), rgba(255,255,255,0.04)); display:flex; flex-direction:column; box-shadow:0 10px 24px rgba(0,0,0,0.25) inset}
+  .history{flex:1; min-height:0; width:100%; height:100%; border:2px solid var(--c64-border); border-radius:12px; padding:10px; background:linear-gradient(180deg, rgba(0,0,0,0.08), rgba(255,255,255,0.04)); display:flex; flex-direction:column; box-shadow:0 10px 24px rgba(0,0,0,0.25) inset}
   .historyHeader{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
   .historyTitle{font-size:13px; font-weight:800}
   .patternGrid{flex:1; min-height:0; width:100%; overflow:auto; display:grid; grid-template-columns:repeat(16,1fr); grid-auto-rows:24px; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px; position:relative;}
@@ -164,6 +164,8 @@
   .patternNote{background:rgba(0,128,255,0.5); border:1px solid #08f; z-index:10; cursor:move; position:relative;}
   .patternNote::after{content:""; position:absolute; right:0; top:0; width:4px; height:100%; background:rgba(0,0,0,0.2); cursor:ew-resize;}
   .playhead{position:absolute; top:0; bottom:0; width:2px; background:rgba(255,0,0,0.7); pointer-events:none;}
+  .patternCursor{border:2px solid red; background:rgba(255,0,0,0.1); pointer-events:none;}
+  .patternStatus{margin-top:4px; font-size:12px;}
 
 /* Boot overlay */
 #bootOverlay{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-fg); display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace;}
@@ -238,7 +240,7 @@
     <section id="help-arp"><h3>Arpeggiator</h3><p>Cycle held notes using mode, rate, and gate settings.</p></section>
     <section id="help-oct"><h3>Octave</h3><p>Shift the keyboard range with the arrow buttons or , and . keys.</p></section>
     <section id="help-keyboard"><h3>Keyboard</h3><p>Play with A–K and W–U keys or click; use &lt; / &gt; or , / . for octave.</p></section>
-    <section id="help-track"><h3>Track Editor</h3><p>Edit patterns; global length sets default size.</p></section>
+    <section id="help-track"><h3>Track Editor</h3><p>Edit patterns; global length sets default size. Use arrow keys to move, Enter to insert notes, and Delete/Backspace to remove.</p></section>
     <section id="help-fx"><h3>FX</h3><p>Choose instruments and adjust Delay, Chorus, Crush, and Drive.</p></section>
     <section id="help-trackers"><h3>Trackers</h3><p>Right column shows two voice trackers referencing patterns.</p></section>
     <section id="help-drums"><h3>Drum Machine</h3><p>Program Kick, Snare, Hat, and Tom steps with its own length.</p></section>
@@ -446,6 +448,7 @@
                   <input id="patternLen" type="number" min="1" value="1" style="width:40px">
                 </label>
                 <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
+                <button class="c64-btn" id="loadPatternBtn" title="Load pattern by name">Load</button>
                 <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
                 <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
                 <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
@@ -453,6 +456,7 @@
               </div>
             </div>
             <div class="patternGrid" id="patternGrid" role="grid"></div>
+            <div id="patternStatus" class="patternStatus"></div>
           </div>
         </div>
         <div id="fxTab" class="tabContent">
@@ -731,7 +735,7 @@ function addVoice(){
   const canvas=document.createElement('canvas'); canvas.className='osc'; oscWrap.appendChild(canvas);
   const g=canvas.getContext('2d');
   const data=new Uint8Array(analyser.fftSize);
-  const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), recording:[], activeRec:new Map(), isRecording:false, recStart:0, playTimeouts:[]};
+  const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), patternNames:Array(8).fill(0).map((_,i)=>'Pattern '+(i+1)), recording:[], activeRec:new Map(), isRecording:false, recStart:0, playTimeouts:[]};
   voice.trackerTrack=0;
   if(state.engine==='wasm' && wasmBytes){
     const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
@@ -771,17 +775,22 @@ const stopBtn = get('stopPatternBtn');
 const playBtn = get('playPatternBtn');
 const clearBtn = get('clearPatternBtn');
 const saveBtn = get('savePatternBtn');
+const loadBtn = get('loadPatternBtn');
 const patternSel = get('patternSel');
 const voiceDisp = get('voiceDisp');
 const prevVoiceBtn = get('voicePrev');
 const nextVoiceBtn = get('voiceNext');
 const stepResSel = get('stepResSel');
 const patternLenInput = get('patternLen');
+const patternStatus = get('patternStatus');
 
 // History state – used by pattern editor and note recording
 let history = [];                // {note, freq, oct, t0, t1, dur}
 const activeHist = new Map();    // el -> index
 const patternGrid = document.getElementById('patternGrid');
+const cursorEl=document.createElement('div');
+cursorEl.className='patternCursor';
+let cursor={row:0,col:0};
 const noteOrder = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 let patternRows = 12, patternCols = 16;
 let drag = null; // current drag state
@@ -792,6 +801,31 @@ function gridCols(){
 
 function stepSeconds(){
   return (60/valNum('bpm',120))*4/(parseInt(stepResSel.value)||16);
+}
+
+function ensureCursorVisible(){
+  const idx=cursor.row*patternCols+cursor.col;
+  const cell=patternGrid.children[idx];
+  if(cell) cell.scrollIntoView({block:'nearest', inline:'nearest'});
+}
+
+function updateStatus(){
+  let info=`Step ${cursor.col+1}/${patternCols} | Note ${noteOrder[cursor.row]}`;
+  const h=history.find(h=>h.row===cursor.row && cursor.col>=h.start && cursor.col<h.start+h.dur);
+  if(h) info+=` | Len ${h.dur}`;
+  info+=` | Time ${(cursor.col*stepSeconds()).toFixed(2)}s`;
+  patternStatus.textContent=info;
+}
+
+function updateStatusPlayback(now,startAt){
+  patternStatus.textContent=`Time ${(now-startAt).toFixed(2)}s`;
+}
+
+function updateCursor(){
+  cursorEl.style.gridRowStart=cursor.row+1;
+  cursorEl.style.gridColumnStart=cursor.col+1;
+  ensureCursorVisible();
+  updateStatus();
 }
 
 const playhead=document.createElement('div');
@@ -808,6 +842,7 @@ function startPlayhead(duration, startAt){
     if(now>=endAt){ stopPlayhead(); return; }
     const p=(now-startAt)/duration;
     playhead.style.left=(p*100)+"%";
+    updateStatusPlayback(now,startAt);
     playheadRAF=requestAnimationFrame(step);
   };
   playheadRAF=requestAnimationFrame(step);
@@ -817,6 +852,7 @@ function stopPlayhead(){
   if(playheadRAF){ cancelAnimationFrame(playheadRAF); playheadRAF=null; }
   if(playhead.parentNode) playhead.remove();
   playhead.style.left='0%';
+  updateCursor();
 }
 
 function renderPattern(){
@@ -830,6 +866,8 @@ function renderPattern(){
     el.dataset.index=i;
     patternGrid.appendChild(el);
   });
+  patternGrid.appendChild(cursorEl);
+  updateCursor();
 }
 
 function cellFromEvent(e){
@@ -853,6 +891,8 @@ function buildPatternGrid(rows = 12, cols = gridCols()) {
       patternGrid.appendChild(cell);
     }
   }
+  cursor.row=Math.min(cursor.row, rows-1);
+  cursor.col=Math.min(cursor.col, cols-1);
   renderPattern();
 }
 
@@ -868,6 +908,7 @@ function startDrag(e){
     const rect=e.target.getBoundingClientRect();
     const resize=(e.clientX-rect.right)>=-6 && (e.clientX-rect.right)<=6;
     drag={mode:resize?'resize':'move', index:idx, el:e.target, startCol:h.start, startRow:h.row, startDur:h.dur, dur:h.dur, row:h.row, col:h.start};
+    cursor.row=h.row; cursor.col=h.start;
   }else{
     const {row,col}=cellFromEvent(e);
     const el=document.createElement('div');
@@ -877,7 +918,9 @@ function startDrag(e){
     el.style.gridColumnEnd=col+2;
     patternGrid.appendChild(el);
     drag={mode:'create', el, startCol:col, startRow:row, dur:1};
+    cursor.row=row; cursor.col=col;
   }
+  updateCursor();
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
 }
@@ -897,6 +940,9 @@ function onMouseMove(e){
     drag.dur=end-drag.startCol+1;
     drag.el.style.gridColumnEnd=drag.startCol+drag.dur+1;
   }
+  if(drag.mode==='move'){ cursor.row=drag.row; cursor.col=drag.col; }
+  else { cursor.row=drag.startRow; cursor.col=drag.startCol; }
+  updateCursor();
 }
 
 function onMouseUp(){
@@ -916,6 +962,23 @@ function onMouseUp(){
   drag=null;
   document.removeEventListener('mousemove', onMouseMove);
   document.removeEventListener('mouseup', onMouseUp);
+  renderPattern();
+}
+
+function insertNoteAtCursor(){
+  const existing=history.find(h=>h.row===cursor.row && cursor.col>=h.start && cursor.col<h.start+h.dur);
+  if(!existing){
+    history.push({note:noteOrder[cursor.row], row:cursor.row, start:cursor.col, dur:1});
+    renderPattern();
+  }
+}
+
+function deleteNoteAtCursor(){
+  const idx=history.findIndex(h=>h.row===cursor.row && cursor.col>=h.start && cursor.col<h.start+h.dur);
+  if(idx>=0){
+    history.splice(idx,1);
+    renderPattern();
+  }
 }
 
 patternGrid.addEventListener('mousedown', startDrag);
@@ -931,7 +994,7 @@ function populatePatternSelect(){
   for(let i=0;i<v.patterns.length;i++){
     const o=document.createElement('option');
     o.value=i;
-    o.textContent=i+1;
+    o.textContent=v.patternNames[i]||('Pattern '+(i+1));
     patternSel.appendChild(o);
   }
   populateTrackerSelects();
@@ -974,10 +1037,23 @@ function stopRecording(){
 
 function savePattern(){
   const v=voices[currentVoice];
+  const idx=selectedPatternIndex();
+  const name=prompt('Pattern name?', v.patternNames[idx]||'');
+  if(name===null) return;
+  v.patternNames[idx]=name||('Pattern '+(idx+1));
   const stepSec=stepSeconds();
-  v.patterns[selectedPatternIndex()] = history.filter(h=>h.start!=null).map(h=>({type:'note', note:h.note, t0:h.start*stepSec, dur:h.dur*stepSec, params:snapshotParams()}));
+  v.patterns[idx] = history.filter(h=>h.start!=null).map(h=>({type:'note', note:h.note, t0:h.start*stepSec, dur:h.dur*stepSec, params:snapshotParams()}));
+  populatePatternSelect();
+  patternSel.value=idx;
   showPattern();
-  populateTrackerSelects();
+}
+
+function loadPatternByName(){
+  const v=voices[currentVoice];
+  const name=prompt('Load pattern name?', v.patternNames.join(', '));
+  if(!name) return;
+  const idx=v.patternNames.indexOf(name);
+  if(idx>=0){ patternSel.value=idx; showPattern(); }
 }
 
 function playSelected(){
@@ -1002,7 +1078,7 @@ function populateTrackerSelects(){
     if(!v) return;
     for(let i=0;i<v.patterns.length;i++){
       const o=document.createElement('option');
-      o.value=i; o.textContent=i+1; sel.appendChild(o);
+      o.value=i; o.textContent=v.patternNames[i]||('Pattern '+(i+1)); sel.appendChild(o);
     }
     sel.value=v.trackerTrack||0;
   });
@@ -1043,11 +1119,26 @@ stopBtn.addEventListener('click', ()=>{ stopPlayback(voices[currentVoice]); stop
 playBtn.addEventListener('click', playSelected);
 clearBtn.addEventListener('click', clearPattern);
 saveBtn.addEventListener('click', savePattern);
+loadBtn.addEventListener('click', loadPatternByName);
 patternSel.addEventListener('change', showPattern);
 get('addVoiceBtn').addEventListener('click', addVoice);
 addVoice();
 populateTrackerSelects();
 renderTracker(0);
+
+document.addEventListener('keydown', e=>{
+  if(!document.getElementById('trackTab').classList.contains('active')) return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+  switch(e.key){
+    case 'ArrowLeft': cursor.col=Math.max(0,cursor.col-1); updateCursor(); e.preventDefault(); break;
+    case 'ArrowRight': cursor.col=Math.min(patternCols-1,cursor.col+1); updateCursor(); e.preventDefault(); break;
+    case 'ArrowUp': cursor.row=Math.max(0,cursor.row-1); updateCursor(); e.preventDefault(); break;
+    case 'ArrowDown': cursor.row=Math.min(patternRows-1,cursor.row+1); updateCursor(); e.preventDefault(); break;
+    case 'Enter': insertNoteAtCursor(); e.preventDefault(); break;
+    case 'Delete':
+    case 'Backspace': deleteNoteAtCursor(); e.preventDefault(); break;
+  }
+});
 
 document.querySelectorAll('.tabBtn').forEach(btn=>{
   btn.addEventListener('click',()=>{
