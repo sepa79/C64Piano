@@ -177,7 +177,7 @@
 #bootOverlay::before{content:""; position:fixed; inset:0; pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 3px); mix-blend-mode:multiply; opacity:.35;}
 #bootPanel{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:left; font-size:min(calc((100vw - 240px)/40), calc((100vh - 240px)/25)); width:40ch;}
 #bootText{white-space:pre-wrap; line-height:1; width:40ch; height:25em; background:var(--c64-bg);}
-#bootCursor{display:inline-block; width:1ch; height:1em; background:var(--c64-fg); color:var(--c64-bg); animation:blink 1s steps(1) infinite;}
+  #bootCursor{display:inline-block; width:1ch; height:1em; background:currentColor; animation:blink 1s steps(1) infinite;}
 @keyframes blink{50%{opacity:0;}}
 #bootOverlay.poweroff{animation:c64-off .8s steps(8) forwards; pointer-events:none;}
 .bootControls{margin-top:24px; display:flex; flex-direction:column; gap:20px; align-items:center; color:var(--c64-bg);}
