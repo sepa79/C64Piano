@@ -447,11 +447,10 @@
                 <label style="display:flex;align-items:center;gap:4px">Len
                   <input id="patternLen" type="number" min="1" value="1" style="width:40px">
                 </label>
-                <button class="c64-btn" id="savePatternBtn" title="Save recording to track">Save</button>
+                <button class="c64-btn" id="savePatternBtn" title="Save pattern to track">Save</button>
                 <button class="c64-btn" id="loadPatternBtn" title="Load pattern by name">Load</button>
                 <button class="c64-btn" id="playPatternBtn" title="Play selected track">Play</button>
-                <button class="c64-btn" id="stopPatternBtn" title="Stop playback or recording">Stop</button>
-                <button class="c64-btn" id="recordPatternBtn" title="Record to track">Record</button>
+                <button class="c64-btn" id="stopPatternBtn" title="Stop playback">Stop</button>
                 <button class="c64-btn" id="clearPatternBtn" title="Clear selected track">Clear</button>
               </div>
             </div>
@@ -735,7 +734,7 @@ function addVoice(){
   const canvas=document.createElement('canvas'); canvas.className='osc'; oscWrap.appendChild(canvas);
   const g=canvas.getContext('2d');
   const data=new Uint8Array(analyser.fftSize);
-  const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), patternNames:Array(8).fill(0).map((_,i)=>'Pattern '+(i+1)), recording:[], activeRec:new Map(), isRecording:false, recStart:0, playTimeouts:[]};
+  const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), patternNames:Array(8).fill(0).map((_,i)=>'Pattern '+(i+1)), playTimeouts:[]};
   voice.trackerTrack=0;
   if(state.engine==='wasm' && wasmBytes){
     const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
@@ -770,7 +769,6 @@ function selectVoice(i){
 }
 
 
-const recordBtn = get('recordPatternBtn');
 const stopBtn = get('stopPatternBtn');
 const playBtn = get('playPatternBtn');
 const clearBtn = get('clearPatternBtn');
@@ -784,9 +782,8 @@ const stepResSel = get('stepResSel');
 const patternLenInput = get('patternLen');
 const patternStatus = get('patternStatus');
 
-// History state – used by pattern editor and note recording
-let history = [];                // {note, freq, oct, t0, t1, dur}
-const activeHist = new Map();    // el -> index
+// Pattern editor note data
+let history = [];                // {note,row,start,dur}
 const patternGrid = document.getElementById('patternGrid');
 const cursorEl=document.createElement('div');
 cursorEl.className='patternCursor';
@@ -1005,7 +1002,7 @@ function selectedPatternIndex(){ return parseInt(patternSel.value)||0; }
 function showPattern(){
   const v=voices[currentVoice];
   const p=v.patterns[selectedPatternIndex()]||[];
-  history=[]; buildPatternGrid(); activeHist.clear();
+  history=[]; buildPatternGrid();
   const stepSec=stepSeconds();
   p.forEach(ev=>{
     if(ev.type==='note'){
@@ -1017,22 +1014,6 @@ function showPattern(){
   });
   renderPattern();
   renderTracker(currentVoice);
-}
-
-function startRecording(){
-  const v=voices[currentVoice];
-  stopPlayback(v);
-  history=[]; buildPatternGrid(); activeHist.clear();
-  v.recording=[]; v.activeRec=new Map(); v.isRecording=true; v.recStart=ctx.currentTime;
-  recordBtn.disabled=true; stopBtn.disabled=false;
-}
-
-function stopRecording(){
-  const v=voices[currentVoice];
-  if(!v.isRecording) return;
-  v.isRecording=false;
-  recordBtn.disabled=false; stopBtn.disabled=true;
-  v.activeRec.clear();
 }
 
 function historyToPattern(){
@@ -1070,7 +1051,7 @@ function playSelected(){
 function clearPattern(){
   const v=voices[currentVoice];
   v.patterns[selectedPatternIndex()] = [];
-  history=[]; buildPatternGrid(); activeHist.clear();
+  history=[]; buildPatternGrid();
   populateTrackerSelects();
   renderTracker(currentVoice);
 }
@@ -1119,8 +1100,7 @@ document.querySelectorAll('.trackerTrackSel').forEach(sel=>{
 
 prevVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice-1));
 nextVoiceBtn.addEventListener('click',()=>selectVoice(currentVoice+1));
-recordBtn.addEventListener('click', startRecording);
-stopBtn.addEventListener('click', ()=>{ stopPlayback(voices[currentVoice]); stopRecording(); });
+stopBtn.addEventListener('click', ()=>{ stopPlayback(voices[currentVoice]); });
 playBtn.addEventListener('click', playSelected);
 clearBtn.addEventListener('click', clearPattern);
 saveBtn.addEventListener('click', savePattern);
@@ -1620,7 +1600,7 @@ function createVoice(note, voice){
   return state.engine==='wasm'? createWasmVoice(note,voice) : createSIDVoice(note,voice);
 }
 
-// === Piano UI wiring + history ===
+// === Piano UI wiring ===
 const whites=document.querySelectorAll('.white'); const blacks=document.querySelectorAll('.black');
 const active=new Map(); const keyMap={}; [...whites,...blacks].forEach(k=>{ const kk=k.dataset.key; if(kk) keyMap[kk.toLowerCase()]=k; });
 
@@ -1631,35 +1611,11 @@ function noteOn(el){
   const v=createVoice(n, voices[idx]);
   active.set(el,{node:v, voiceIndex:idx});
   el.classList.add('active');
-  const entry={ note:n, freq:freqFor(n), oct:octave, t0:ctx.currentTime, t1:null, dur:null };
-  const hIdx=history.push(entry)-1; activeHist.set(el, hIdx);
-  const vVoice=voices[idx];
-  if(vVoice.isRecording){
-    const rec={type:'note', note:n, t0:ctx.currentTime - vVoice.recStart, dur:null, params:snapshotParams()};
-    const recIdx=vVoice.recording.push(rec)-1;
-    vVoice.activeRec.set(el, recIdx);
-  }
 }
 function noteOff(el){
   const act=active.get(el);
   if(act){ act.node.stop(); active.delete(el); }
   el.classList.remove('active');
-  const hIdx=activeHist.get(el);
-  if(hIdx!=null){
-    history[hIdx].t1=ctx.currentTime;
-    history[hIdx].dur=Math.max(0.01, history[hIdx].t1-history[hIdx].t0);
-    activeHist.delete(el);
-  }
-  const idx=act?act.voiceIndex:currentVoice;
-  const vVoice=voices[idx];
-  if(vVoice.isRecording){
-    const recIdx=vVoice.activeRec.get(el);
-    if(recIdx!=null){
-      const rec=vVoice.recording[recIdx];
-      rec.dur=Math.max(0.01, ctx.currentTime - vVoice.recStart - rec.t0);
-      vVoice.activeRec.delete(el);
-    }
-  }
 }
 
 whites.forEach(w=>{ w.addEventListener('mousedown',e=>{ if(e.button!==0) return; noteOn(w); }); w.addEventListener('mouseup',()=>noteOff(w)); w.addEventListener('mouseleave',()=>noteOff(w)); w.addEventListener('touchstart',e=>{ e.preventDefault(); noteOn(w); },{passive:false}); w.addEventListener('touchend',e=>{ e.preventDefault(); noteOff(w); },{passive:false}); });
@@ -1713,10 +1669,6 @@ function playClap(t){ const bursts=[0,0.02,0.04]; bursts.forEach((dly)=>{ const 
 function playCowbell(t){ const o1=ctx.createOscillator(), o2=ctx.createOscillator(); o1.type=o2.type='square'; o1.frequency.setValueAtTime(560,t); o2.frequency.setValueAtTime(845,t); const g=ctx.createGain(); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o1.connect(g); o2.connect(g); g.connect(master); o1.start(t); o2.start(t); o1.stop(t+0.22); o2.stop(t+0.22); }
 function triggerDrum(name,t){
   if(ctx.state!=='running') return;
-  const v=voices[currentVoice];
-  if(v && v.isRecording){
-    v.recording.push({type:'drum', drum:name, t0:(t||ctx.currentTime)-v.recStart});
-  }
   ({Kick:playKick,Snare:playSnare,Hat:playHat,Tom:playTom,Clap:playClap,Cowbell:playCowbell}[name] || playKick)(t);
 }
 
