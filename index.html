@@ -115,8 +115,9 @@
   .ctrlCard{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
   .ctrlCard .ctrls{display:flex;flex-direction:column;gap:6px;min-width:180px;flex:1}
   .ctrlCard .ctrls label{display:flex;align-items:center;gap:6px;width:100%}
-  .ctrlCard .ctrls label span{width:80px;text-align:left}
-  .ctrlCard .ctrls label select{flex:1}
+  .ctrlCard .ctrls label span{width:110px;text-align:left;white-space:nowrap}
+  .ctrlCard .ctrls label select{flex:1;min-width:0}
+  #wavePreset{width:100%}
   .sliderWrap{display:flex;align-items:center;gap:6px;flex:1}
   .sliderWrap input[type=range]{flex:1}
   .sliderWrap input[type=number]{width:60px;background:var(--c64-bg);color:var(--c64-fg);border:1px solid var(--c64-border);border-radius:4px;padding:2px}
@@ -302,7 +303,7 @@
             <label title="Wave preset"><span>Preset</span><select id="wavePreset"></select></label>
           </div>
           <div class="miniWrap">
-            <canvas id="waveVis" class="mini" width="180" height="80" title="Waveform view"></canvas>
+            <canvas id="waveVis" class="mini" width="220" height="80" title="Waveform view"></canvas>
           </div>
         </div>
         <div class="ctrls sliderCol">
