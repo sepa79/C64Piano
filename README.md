@@ -4,9 +4,14 @@ C64Piano is a retro-styled browser piano inspired by the Commodore 64. It showca
 
 ## Version
 
-Current version: 0.2.1
+Current version: 0.3.0
 
 ## Changelog
+
+### 0.3.0
+- Refactored layout into left, middle, and right regions with a top bar and bottom drum machine.
+- Added tabbed middle editor with Track Editor and FX sections for instrument management.
+- Introduced right-side trackers showing selected tracks per voice.
 
 ### 0.2.1
 - Fix silent WASM audio on GitHub Pages by unlocking audio on user gesture with a confirmation beep.
