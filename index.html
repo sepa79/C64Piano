@@ -1350,6 +1350,7 @@ async function runTypingSequence(cursor, controls, startBtn){
   }
   // newline plus empty line
   cursor.before(document.createTextNode('\n\n'));
+  cursor.style.display='none';
 
   // Simulate drive search/loading messages
   cursor.before(document.createTextNode('SEARCHING FOR C64 PIANO\n'));
@@ -1357,6 +1358,7 @@ async function runTypingSequence(cursor, controls, startBtn){
   cursor.before(document.createTextNode('LOADING\n'));
   await delay(2000);
   cursor.before(document.createTextNode('READY.\n'));
+  cursor.style.display='inline-block';
 
   // Type RUN command
   const runCmd='RUN';
@@ -1365,9 +1367,8 @@ async function runTypingSequence(cursor, controls, startBtn){
     await delay(20+Math.random()*20);
   }
   cursor.before(document.createTextNode('\n'));
-
-  await delay(500);
   cursor.style.display='none';
+  await delay(500);
   const msg='PRESS RETURN TO ENABLE SOUND';
   const msgEl=document.createElement('div');
   cursor.before(msgEl);
