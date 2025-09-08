@@ -165,6 +165,47 @@
   @media (max-width: 760px){ :root{ --key-w:46px; --key-h:180px; --black-w:32px; --black-h:116px; } .drums{grid-template-columns:110px repeat(16,1fr)} }
   @media (max-width: 560px){ :root{ --key-w:40px; --key-h:160px; --black-w:28px; --black-h:100px; } }
 </style>
+<style id="v27-layout-only">
+  /* Grid: left / center / right */
+  #c64-v27-grid{
+    display:grid; gap:10px;
+    grid-template-columns:300px minmax(560px,1fr) 420px;
+    grid-template-rows:auto 1fr auto;
+    grid-template-areas:
+      "left keyboard voices"
+      "left track    voices"
+      "drums drums   voices";
+  }
+  #c64-v27-left{ grid-area:left; display:grid; gap:10px; min-height:0; }
+  #c64-v27-keyboard{ grid-area:keyboard; min-height:0; }
+  #c64-v27-center{ grid-area:track; display:flex; flex-direction:column; gap:6px; min-height:0; }
+  #c64-v27-voices{ grid-area:voices; display:grid; grid-template-columns:1fr 1fr; gap:10px; min-height:0; }
+  #c64-v27-drums{ grid-area:drums; min-height:0; }
+
+  /* Voice panels fill height; trackers scroll inside */
+  #c64-v27-voices > .v27-voice{ display:flex; flex-direction:column; min-height:0; }
+  .v27-trk{ flex:1 1 auto; min-height:0; overflow:auto; }
+
+  /* Minimal utility */
+  .v27-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .v27-tabs{ display:flex; align-items:center; gap:6px; }
+  .v27-tabs .spacer{ margin-left:auto; }
+  .v27-hide{ display:none !important; }
+
+  /* Responsive collapse */
+  @media (max-width:1180px){
+    #c64-v27-grid{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "keyboard"
+        "voices"
+        "left"
+        "track"
+        "drums";
+    }
+    #c64-v27-voices{ grid-template-columns:1fr; }
+  }
+</style>
 </head>
 <body>
 <div id="bootOverlay">
@@ -1215,6 +1256,136 @@ updateADSRVis();
 // Initial visuals
 updateWaveVis(); updateFilterVis(); updateADSRVis();
 initBootIntro();
+</script>
+<script id="v27-remap">
+(function(){
+  // Helpers
+  const $ = (s,p=document)=>p.querySelector(s);
+  const $$ = (s,p=document)=>Array.from(p.querySelectorAll(s));
+  const hide = el => el && el.classList.add('v27-hide');
+  const show = el => el && el.classList.remove('v27-hide');
+
+  // Heuristic locators (adjust if you know exact selectors)
+  const findKeyboard = () =>
+    $('#keyboard, .keyboard, [aria-label*="keyboard" i]') ||
+    $$('section,div').find(n=>/keyboard/i.test(n.className||n.id||''));
+  const findTrackArea = () =>
+    $('#track, .track, .pattern, [aria-label*="track" i], [aria-label*="pattern" i]') ||
+    $$('section,div').find(n=>/(track|pattern|grid)/i.test(n.className||n.id||''));
+  const findVoices = () =>
+    $('#voices, .voices, [aria-label*="voice" i]') ||
+    $$('section,div').find(n=>/voice|tracker/i.test(n.className||n.id||''));
+  const findDrums = () =>
+    $('#drums, .drums, [aria-label*="drum" i]') ||
+    $$('section,div').find(n=>/drum/i.test(n.className||n.id||''));
+  const findInstrumentControl = () =>
+    $('#instrument, .instrument-select, select[name*="instrument" i]') ||
+    $$('select').find(s=>/instrument/i.test((s.id||'')+(s.name||'')+((s.closest('label')||{}).textContent||'')));
+
+  // Idempotency
+  if ($('#c64-v27-grid')) return;
+
+  // Create grid wrapper (appended at end of <body> by default)
+  const grid = document.createElement('div');
+  grid.id = 'c64-v27-grid';
+  document.body.appendChild(grid);
+
+  // Slots
+  const left = document.createElement('aside'); left.id='c64-v27-left';
+  const keyWrap = document.createElement('section'); keyWrap.id='c64-v27-keyboard';
+  const center = document.createElement('section'); center.id='c64-v27-center';
+  const voicesWrap = document.createElement('section'); voicesWrap.id='c64-v27-voices';
+  const drumsWrap = document.createElement('section'); drumsWrap.id='c64-v27-drums';
+  grid.append(left, keyWrap, center, voicesWrap, drumsWrap);
+
+  // Move existing sections (listeners preserved)
+  const kb = findKeyboard(); if (kb) keyWrap.appendChild(kb);
+  const track = findTrackArea(); if (track) center.appendChild(track);
+  const voices = findVoices(); if (voices) voicesWrap.appendChild(voices);
+  const drums = findDrums(); if (drums) drumsWrap.appendChild(drums);
+
+  // Center tabs (Track/FX) and move Instrument into FX
+  const ensureTabs = ()=>{
+    // Build minimal tab header only if we have a track area
+    if (!track) return;
+    let tabbar = $('.v27-tabs', center);
+    if (!tabbar) {
+      tabbar = document.createElement('div'); tabbar.className='v27-tabs';
+      const tBtn = document.createElement('button'); tBtn.type='button'; tBtn.textContent='Track Editor'; tBtn.dataset.tab='track';
+      const fBtn = document.createElement('button'); fBtn.type='button'; fBtn.textContent='FX'; tBtn.dataset.tab='track'; fBtn.dataset.tab='fx';
+      const spacer = document.createElement('div'); spacer.className='spacer';
+      // Neutral appearance: no classes that might pick up app styles
+      tabbar.append(tBtn, fBtn, spacer);
+      center.prepend(tabbar);
+      // Panes
+      const trackPane = document.createElement('div'); trackPane.id='v27-trackpane';
+      track.parentNode.insertBefore(trackPane, track);
+      trackPane.appendChild(track);
+      const fxPane = document.createElement('div'); fxPane.id='v27-fxpane'; fxPane.className='v27-hide';
+      center.appendChild(fxPane);
+      // Toggle
+      tabbar.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button'); if(!btn) return;
+        if (btn.dataset.tab==='fx'){ hide(trackPane); show(fxPane); }
+        else { show(trackPane); hide(fxPane); }
+      });
+    }
+  };
+  ensureTabs();
+
+  // Move existing instrument select into FX tab (keep listeners intact)
+  const inst = findInstrumentControl();
+  if (inst && $('#v27-fxpane')) {
+    const row = document.createElement('div'); row.className='v27-row';
+    const label = document.createElement('span'); label.textContent='Instrument:';
+    row.append(label, inst);
+    $('#v27-fxpane').prepend(row);
+
+    // If there was a header duplicate instrument control, hide it visually only
+    const headerInst = $$('select').find(s=>s!==inst && /instrument/i.test((s.id||'')+(s.name||'')+((s.closest('label')||{}).textContent||'')));
+    if (headerInst) headerInst.style.display='none';
+  }
+
+  // Voices: ensure “tall pair” (two columns) and make inner tracker areas scrollable
+  if (voices) {
+    // If the moved voices block isn't already two columns, create two neutral wrappers
+    if (!voicesWrap.querySelector('.v27-voice')) {
+      const col1 = document.createElement('div'); col1.className='v27-voice';
+      const col2 = document.createElement('div'); col2.className='v27-voice';
+      const items = Array.from(voices.children);
+      items.forEach((n,i)=> (i%2? col2:col1).appendChild(n));
+      voicesWrap.append(col1, col2);
+      // Add internal scroll containers if none
+      [col1,col2].forEach(c=>{
+        if(!c.querySelector('.v27-trk')){
+          const trk=document.createElement('div'); trk.className='v27-trk';
+          // Insert at end so existing headers stay on top
+          c.appendChild(trk);
+        }
+      });
+    }
+  }
+
+  // Drums: surface Voice/Len selects in a small header row (reuse if present)
+  if (drums) {
+    if (!drumsWrap.querySelector('.v27-row')) {
+      const bar=document.createElement('div'); bar.className='v27-row';
+      const leftLbl=document.createElement('strong'); leftLbl.textContent='Drum Machine';
+      const right=document.createElement('div'); right.className='v27-row';
+
+      const drumVoice = $('#drumVoice, .drum-voice, select[name*="drumvoice" i]') || document.createElement('select');
+      const drumLen = $('#drumLen, .drum-length, select[name*="drumlen" i]') || document.createElement('select');
+
+      // Populate if these are new placeholders (no visual styling)
+      if (!drumVoice.options.length) ['CH1','CH2','CH3'].forEach(v=>{ const o=document.createElement('option'); o.value=v;o.text=v; drumVoice.add(o); });
+      if (!drumLen.options.length) ['16','32','64'].forEach(v=>{ const o=document.createElement('option'); o.value=v;o.text=v; drumLen.add(o); });
+
+      right.append('Voice', drumVoice, 'Len', drumLen);
+      bar.append(leftLbl, right);
+      drumsWrap.prepend(bar);
+    }
+  }
+})();
 </script>
 </body>
 </html>
