@@ -159,7 +159,6 @@
   .history{flex:1; min-height:0; width:100%; height:100%; border:2px solid var(--c64-border); border-radius:12px; padding:10px; background:linear-gradient(180deg, rgba(0,0,0,0.08), rgba(255,255,255,0.04)); display:flex; flex-direction:column; box-shadow:0 10px 24px rgba(0,0,0,0.25) inset}
   .historyHeader{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
   .historyTitle{font-size:13px; font-weight:800}
-  .voiceBtn.active{background:#08f;color:#fff;}
   .patternGrid{flex:1; min-height:0; width:100%; overflow:auto; display:grid; grid-template-columns:repeat(16,1fr); grid-auto-rows:24px; background:rgba(0,0,0,0.06); border:1px solid var(--c64-border); border-radius:8px; position:relative;}
   .patternCell{border:1px solid var(--c64-border);}
   .patternNote{background:rgba(0,128,255,0.5); border:1px solid #08f; z-index:10; cursor:move; position:relative;}
@@ -425,16 +424,14 @@
       <div class="block">
         <div class="tabBtns">
           <button class="tabBtn active" data-tab="track">Track Editor</button>
+          <button class="tabBtn" data-tab="drums">Drums</button>
           <button class="tabBtn" data-tab="fx">FX</button>
         </div>
         <div id="trackTab" class="tabContent active">
           <div class="history">
             <div class="historyHeader">
               <div style="display:flex;align-items:center;gap:6px"><div class="historyTitle">Pattern Editor</div><button class="cardHelp" data-help="track">?</button></div>
-              <div style="display:flex;gap:6px;align-items:center" id="voiceBtns">
-                <button class="c64-btn voiceBtn active" data-voice="0" title="Track 1">1</button>
-                <button class="c64-btn voiceBtn" data-voice="1" title="Track 2">2</button>
-                <button class="c64-btn voiceBtn" data-voice="2" title="Drums">3</button>
+              <div style="display:flex;gap:6px;align-items:center">
                 <label style="display:flex;align-items:center;gap:4px">Track
                   <select id="patternSel"></select>
                 </label>
@@ -702,7 +699,6 @@ function setEngineButtons(type){
 // Voices and oscilloscopes
 const oscWrap = document.getElementById('oscWrap');
 const voices = [];
-let currentVoice = 0;
 
 function resizeOsc(){
   const h = window.innerHeight / (voices.length || 1);
@@ -741,7 +737,10 @@ function addVoice(){
   const canvas=document.createElement('canvas'); canvas.className='osc'; oscWrap.appendChild(canvas);
   const g=canvas.getContext('2d');
   const data=new Uint8Array(analyser.fftSize);
-  const voice={gain, analyser, canvas, ctx:g, data, patterns:Array(8).fill(0).map(()=>[]), patternNames:Array(8).fill(0).map((_,i)=>'Pattern '+(i+1)), playTimeouts:[]};
+  const shared=voices[0];
+  const patterns=shared?shared.patterns:Array(8).fill(0).map(()=>[]);
+  const patternNames=shared?shared.patternNames:Array(8).fill(0).map((_,i)=>'Pattern '+(i+1));
+  const voice={gain, analyser, canvas, ctx:g, data, patterns, patternNames, playTimeouts:[]};
   voice.trackerTrack=0;
   if(state.engine==='wasm' && wasmBytes){
     const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
@@ -759,28 +758,14 @@ function addVoice(){
     };
   }
   voices.push(voice);
-  if(voices.length===1) selectVoice(0); else selectVoice(voices.length-1);
+  if(voices.length===1){
+    populatePatternSelect();
+    showPattern();
+  }
   resizeOsc();
   drawVoice(voice);
   populateTrackerSelects();
   renderTracker(voices.length-1);
-}
-
-function selectVoice(i){
-  if(i===2){
-    voiceBtns.forEach(b=>b.classList.toggle('active', parseInt(b.dataset.voice)===2));
-    document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.tabContent').forEach(c=>c.classList.toggle('active', c.id==='drumsTab'));
-    return;
-  }
-  if(voices.length===0) return;
-  currentVoice=(i+voices.length)%voices.length;
-  voiceBtns.forEach(b=>b.classList.toggle('active', parseInt(b.dataset.voice)===currentVoice));
-  document.querySelectorAll('.tabBtn').forEach(b=>b.classList.toggle('active', b.dataset.tab==='track'));
-  document.querySelectorAll('.tabContent').forEach(c=>c.classList.toggle('active', c.id==='trackTab'));
-  populatePatternSelect();
-  showPattern();
-  renderTracker(currentVoice);
 }
 
 
@@ -790,7 +775,6 @@ const clearBtn = get('clearPatternBtn');
 const saveBtn = get('savePatternBtn');
 const loadBtn = get('loadPatternBtn');
 const patternSel = get('patternSel');
-const voiceBtns = document.querySelectorAll('#voiceBtns .voiceBtn');
 const stepResSel = get('stepResSel');
 const patternLenInput = get('patternLen');
 const patternStatus = get('patternStatus');
@@ -1008,7 +992,7 @@ patternLenInput.addEventListener('input', ()=>{ buildPatternGrid(); buildGrid();
 buildPatternGrid();
 
 function populatePatternSelect(){
-  const v=voices[currentVoice];
+  const v=voices[0];
   patternSel.innerHTML='';
   for(let i=0;i<v.patterns.length;i++){
     const o=document.createElement('option');
@@ -1022,7 +1006,7 @@ function populatePatternSelect(){
 function selectedPatternIndex(){ return parseInt(patternSel.value)||0; }
 
 function showPattern(){
-  const v=voices[currentVoice];
+  const v=voices[0];
   const p=v.patterns[selectedPatternIndex()]||[];
   history=[]; buildPatternGrid();
   const stepSec=stepSeconds();
@@ -1035,7 +1019,7 @@ function showPattern(){
     }
   });
   renderPattern();
-  renderTracker(currentVoice);
+  voices.forEach((_,i)=>renderTracker(i));
 }
 
 function historyToPattern(){
@@ -1046,7 +1030,7 @@ function historyToPattern(){
 }
 
 function savePattern(){
-  const v=voices[currentVoice];
+  const v=voices[0];
   const idx=selectedPatternIndex();
   const name=prompt('Pattern name?', v.patternNames[idx]||'');
   if(name===null) return;
@@ -1058,7 +1042,7 @@ function savePattern(){
 }
 
 function loadPatternByName(){
-  const v=voices[currentVoice];
+  const v=voices[0];
   const name=prompt('Load pattern name?', v.patternNames.join(', '));
   if(!name) return;
   const idx=v.patternNames.indexOf(name);
@@ -1066,16 +1050,16 @@ function loadPatternByName(){
 }
 
 function playSelected(){
-  const v=voices[currentVoice];
+  const v=voices[0];
   playPattern(v, historyToPattern());
 }
 
 function clearPattern(){
-  const v=voices[currentVoice];
+  const v=voices[0];
   v.patterns[selectedPatternIndex()] = [];
   history=[]; buildPatternGrid();
   populateTrackerSelects();
-  renderTracker(currentVoice);
+  voices.forEach((_,i)=>renderTracker(i));
 }
 
 function populateTrackerSelects(){
@@ -1120,10 +1104,7 @@ document.querySelectorAll('.trackerTrackSel').forEach(sel=>{
   });
 });
 
-voiceBtns.forEach(btn=>{
-  btn.addEventListener('click',()=>selectVoice(parseInt(btn.dataset.voice)));
-});
-stopBtn.addEventListener('click', ()=>{ stopPlayback(voices[currentVoice]); });
+stopBtn.addEventListener('click', ()=>{ stopPlayback(voices[0]); });
 playBtn.addEventListener('click', playSelected);
 clearBtn.addEventListener('click', clearPattern);
 saveBtn.addEventListener('click', savePattern);
@@ -1131,7 +1112,6 @@ loadBtn.addEventListener('click', loadPatternByName);
 patternSel.addEventListener('change', showPattern);
 addVoice();
 addVoice();
-selectVoice(0);
 populateTrackerSelects();
 renderTracker(0);
 renderTracker(1);
@@ -1546,7 +1526,7 @@ function updateADSRVis(){
 }
 
 // ======= Synth voice =======
-function createSIDVoice(note, voice=voices[currentVoice]){
+function createSIDVoice(note, voice=voices[0]){
   ensureAudio();
   const now=ctx.currentTime; const f=freqFor(note);
   const waveSel=state.wave; const cutoff=valNum('sidCutoff',1700); const res=valNum('sidRes',5);
@@ -1613,7 +1593,7 @@ function createSIDVoice(note, voice=voices[currentVoice]){
   return { stop:()=>{ const t=ctx.currentTime; vca.gain.setTargetAtTime(0.0001,t,Math.max(0.01,R)); source.stop(t+R+0.03); if(pwmTimer) clearInterval(pwmTimer); if(vib) vib.stop(t+0.01); if(arpTimer) clearInterval(arpTimer); } };
 }
 
-function createWasmVoice(note, voice=voices[currentVoice]){
+function createWasmVoice(note, voice=voices[0]){
   ensureAudio();
   const f=freqFor(note);
   const A=valNum('sidA',8)/1000, D=valNum('sidD',120)/1000, S=valNum('sidS',0.5), R=valNum('sidR',240)/1000;
@@ -1643,7 +1623,7 @@ const active=new Map(); const keyMap={}; [...whites,...blacks].forEach(k=>{ cons
 function noteOn(el){
   if(ctx.state!=='running') return;
   const n=el.dataset.note;
-  const idx=currentVoice;
+  const idx=0;
   const v=createVoice(n, voices[idx]);
   active.set(el,{node:v, voiceIndex:idx});
   el.classList.add('active');
