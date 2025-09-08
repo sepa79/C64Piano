@@ -165,6 +165,14 @@
   @media (max-width: 760px){ :root{ --key-w:46px; --key-h:180px; --black-w:32px; --black-h:116px; } .drums{grid-template-columns:110px repeat(16,1fr)} }
   @media (max-width: 560px){ :root{ --key-w:40px; --key-h:160px; --black-w:28px; --black-h:100px; } }
 </style>
+<style id="c64-v27-style">
+  /* Only selectors prefixed with #c64-v27 to avoid clashes */
+  #c64-v27{ --gap:10px; --radius:14px; --panel1:#201538; --panel2:#281a46; --ink:#7dff74; --dim:#4bbd54; --accent:#80ffea }
+  #c64-v27 .panel{background:linear-gradient(180deg,var(--panel1),var(--panel2));border-radius:var(--radius);padding:10px}
+  /* grid shell: left / center / right */
+  #c64-v27 .grid{display:grid;gap:var(--gap);grid-template-columns:300px minmax(560px,1fr) 420px;grid-template-rows:auto 1fr auto;grid-template-areas:"left keyboard voices" "left track voices" "drums drums voices"}
+  /* … keep the CSS minimal; only what’s needed for layout & placeholders … */
+</style>
 </head>
 <body>
 <div id="bootOverlay">
@@ -1215,6 +1223,108 @@ updateADSRVis();
 // Initial visuals
 updateWaveVis(); updateFilterVis(); updateADSRVis();
 initBootIntro();
+</script>
+<div id="c64-v27">
+  <section class="grid">
+    <!-- LEFT: scopes + compact controls (UI only) -->
+    <aside class="panel" style="grid-area:left">
+      <!-- Oscillator with waveform buttons -->
+      <div class="card">
+        <div class="buttons">
+          <button data-osc="pulse">Pulse</button>
+          <button data-osc="saw">Saw</button>
+          <button data-osc="tri">Tri</button>
+          <button data-osc="noise">Noise</button>
+        </div>
+        <div class="scope">Waveform / PWM</div>
+      </div>
+      <div class="card"><div class="scope">ADSR</div></div>
+      <div class="card"><div class="scope">Filter</div></div>
+      <div class="card"><div class="scope">Arp</div></div>
+    </aside>
+
+    <!-- CENTER: keyboard + tabs (Track/FX) -->
+    <section class="panel" style="grid-area:keyboard"><div class="scope">Keyboard (reuse existing if present)</div></section>
+    <section class="panel" style="grid-area:track">
+      <div class="tabs">
+        <button data-tab="track" class="is-active">Track Editor</button>
+        <button data-tab="fx">FX</button>
+        <div class="right">
+          <label>Track</label><select id="v27-track-select"><option>Track 1</option><option>Track 2</option></select>
+          <label>Len</label><select id="v27-track-len"><option>16</option><option selected>32</option><option>64</option></select>
+        </div>
+      </div>
+      <div id="v27-tab-track" class="scope">Grid / Steps / Notes (placeholder)</div>
+      <div id="v27-tab-fx" class="scope" hidden>
+        <div class="row">
+          <label>Instrument</label>
+          <select id="v27-instrument"><option>Init</option><option>Pluck</option></select>
+          <button id="v27-inst-load">Load</button>
+          <button id="v27-inst-save">Save</button>
+          <button id="v27-inst-saveas">Save As…</button>
+        </div>
+        <div class="scope">FX rack (Delay/Chorus/Bit/Drive)</div>
+      </div>
+    </section>
+
+    <!-- RIGHT: one tall pair of trackers -->
+    <section class="panel" style="grid-area:voices">
+      <div class="voices" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:100%">
+        <div class="voice"><div class="header">Voice 1 (CH1)</div><div class="trk">C-4 · · E-4 · G-4 · …</div></div>
+        <div class="voice"><div class="header">Voice 2 (CH2)</div><div class="trk">· C-3 · C-3 · C-3 …</div></div>
+      </div>
+      <div class="bar"><button id="v27-add-voice">+ Add Voice</button></div>
+    </section>
+
+    <!-- DRUMS: add Voice + Len selectors -->
+    <section class="panel" style="grid-area:drums">
+      <div class="row">
+        <strong>Drum Machine</strong>
+        <label>Voice</label><select id="v27-drum-voice"><option>CH1</option><option selected>CH3</option><option>CH2</option></select>
+        <label>Len</label><select id="v27-drum-len"><option>16</option><option selected>32</option><option>64</option></select>
+      </div>
+      <div class="scope">4×16 steps (placeholder)</div>
+    </section>
+  </section>
+</div>
+<script>
+(function(){
+  const $ = (s, p=document)=>p.querySelector(s);
+  const on = (el,ev,fn)=>el&&el.addEventListener(ev,fn);
+  const show = el=>el&&(el.hidden=false); const hide = el=>el&&(el.hidden=true);
+
+  // Tabs
+  const trackBtn=$('[data-tab="track"]'), fxBtn=$('[data-tab="fx"]');
+  const trackPanel=$('#v27-tab-track'), fxPanel=$('#v27-tab-fx');
+  on(trackBtn,'click',()=>{trackBtn.classList.add('is-active');fxBtn.classList.remove('is-active');show(trackPanel);hide(fxPanel)});
+  on(fxBtn,'click',()=>{fxBtn.classList.add('is-active');trackBtn.classList.remove('is-active');show(fxPanel);hide(trackPanel)});
+
+  // —— Mirror instrument to any existing instrument select (keep old logic working)
+  const newInst=$('#v27-instrument');
+  const oldInst=document.querySelector('#instrument, [name="instrument"], .instrument-select');
+  if(oldInst){
+    oldInst.style.display='none'; // visually hide only
+    on(newInst,'change',()=>{ oldInst.value=newInst.value; oldInst.dispatchEvent(new Event('change',{bubbles:true})); });
+  }
+
+  // —— Mirror track length if an original control exists
+  const newLen=$('#v27-track-len');
+  const oldLen=document.querySelector('#trackLen, [name="trackLen"], .track-length');
+  if(oldLen){ on(newLen,'change',()=>{ oldLen.value=newLen.value; oldLen.dispatchEvent(new Event('change',{bubbles:true})); }); }
+
+  // —— Drum len/voice mirrors
+  const drLen=$('#v27-drum-len');
+  const drVoice=$('#v27-drum-voice');
+  const oldDrLen=document.querySelector('#drumLen, .drum-length');
+  const oldDrVoice=document.querySelector('#drumVoice, .drum-voice');
+  if(oldDrLen){ on(drLen,'change',()=>{ oldDrLen.value=drLen.value; oldDrLen.dispatchEvent(new Event('change',{bubbles:true})); }); }
+  if(oldDrVoice){ on(drVoice,'change',()=>{ oldDrVoice.value=drVoice.value; oldDrVoice.dispatchEvent(new Event('change',{bubbles:true})); }); }
+
+  // —— Backend lamp (optional cosmetic): no routing changes
+  const backend=document.querySelector('#backend, #backendSelect');
+  const newBackend=document.querySelector('#backendSelect, #v27-backend');
+  if(backend && newBackend){ on(newBackend,'change',()=>{ backend.value=newBackend.value; backend.dispatchEvent(new Event('change',{bubbles:true})); }); }
+})();
 </script>
 </body>
 </html>
