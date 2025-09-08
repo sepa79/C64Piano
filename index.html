@@ -1750,6 +1750,44 @@ get('clearDrumBtn').addEventListener('click', clearDrumPattern);
 get('playDrumBtn').addEventListener('click', playDrums);
 get('stopDrumBtn').addEventListener('click', stopDrums);
 
+function loadSampleSong(){
+  const v=voices[0];
+  const params=snapshotParams();
+  v.patternNames[0]='Sample Melody';
+  v.patternNames[1]='Sample Bass';
+  v.patterns[0]=[
+    {type:'note', note:'C', t0:0,   dur:0.5, params},
+    {type:'note', note:'E', t0:0.5, dur:0.5, params},
+    {type:'note', note:'G', t0:1,   dur:0.5, params},
+    {type:'note', note:'C', t0:1.5, dur:0.5, params}
+  ];
+  v.patterns[1]=[
+    {type:'note', note:'C', t0:0, dur:1, params},
+    {type:'note', note:'G', t0:1, dur:1, params}
+  ];
+  voices[0].trackerTrack=0;
+  if(voices[1]) voices[1].trackerTrack=1;
+
+  const steps=gridCols();
+  const dp={0:Array(steps).fill(false),1:Array(steps).fill(false),2:Array(steps).fill(false),3:Array(steps).fill(false)};
+  dp[1][0]=dp[1][8]=true; // Kick
+  dp[0][4]=dp[0][12]=true; // Snare
+  for(let i=0;i<steps;i+=2) dp[2][i]=true; // Hat
+  drumPatternNames[0]='Sample Drums';
+  drumPatterns[0]={pattern:dp, instruments:['Snare','Kick','Hat','Tom'], steps};
+  drumIndex=0;
+
+  populatePatternSelect();
+  patternSel.value=0;
+  showPattern();
+  populateTrackerSelects();
+  renderTracker(0);
+  if(voices[1]) renderTracker(1);
+  populateDrumSelect();
+  get('drumPatternSel').value=0;
+  showDrumPattern();
+}
+
 // Drum synths
 function playKick(t){ const o=ctx.createOscillator(); o.type='triangle'; const g=ctx.createGain(); g.gain.setValueAtTime(1,t); o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(45,t+0.12); g.gain.exponentialRampToValueAtTime(0.001,t+0.18); o.connect(g); g.connect(master); o.start(t); o.stop(t+0.2); }
 function playSnare(t){ const len=2048, buf=ctx.createBuffer(1,len,ctx.sampleRate), d=buf.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1; const n=ctx.createBufferSource(); n.buffer=buf; n.loop=true; const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=800; const g=ctx.createGain(); g.gain.setValueAtTime(0.9,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15); n.connect(hp); hp.connect(g); g.connect(master); n.start(t); n.stop(t+0.16); }
@@ -1798,6 +1836,7 @@ Array.from(document.querySelectorAll('#engineBtns .segBtn')).forEach(btn=>{
   btn.addEventListener('click', ()=>{ setEngine(btn.dataset.eng); });
 });
 setEngineButtons(state.engine);
+loadSampleSong();
 updateFilterVis();
 
 // ADSR presets
