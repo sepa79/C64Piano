@@ -114,9 +114,9 @@
   canvas.mini{background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(255,255,255,0.05)); border:2px solid var(--c64-border); border-radius:8px; backdrop-filter: blur(1px); box-shadow:0 4px 14px rgba(0,0,0,0.25)}
   .ctrlCard{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
   .ctrlCard .ctrls{display:flex;flex-direction:column;gap:6px;min-width:180px}
-  .ctrlCard .ctrls label{display:flex;flex-direction:column;gap:2px;width:100%}
-  .ctrlCard .ctrls label span{text-align:left}
-  .sliderWrap{display:flex;align-items:center;gap:6px;width:100%}
+  .ctrlCard .ctrls label{display:flex;align-items:center;gap:6px;width:100%}
+  .ctrlCard .ctrls label span{width:70px;text-align:left}
+  .sliderWrap{display:flex;align-items:center;gap:6px;flex:1}
   .sliderWrap input[type=range]{flex:1}
   .sliderWrap input[type=number]{width:60px;background:var(--c64-bg);color:var(--c64-fg);border:1px solid var(--c64-border);border-radius:4px;padding:2px}
   .ctrlCard .miniWrap{margin-left:auto;flex-shrink:0}
@@ -167,6 +167,9 @@
 #helpModal{position:fixed; inset:0; background:var(--c64-bg); color:var(--c64-fg); display:none; align-items:center; justify-content:center; z-index:9999; font-family:"C64 Pro Mono", monospace;}
 #helpModal.show{display:flex;}
 #helpPanel{background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel); border:2px solid var(--c64-border); padding:20px; max-width:600px; width:90%; max-height:80vh; overflow:auto;}
+.helpPopup{position:absolute; background:linear-gradient(180deg, rgba(20,32,120,.35), rgba(10,20,70,.35)), var(--c64-panel); border:2px solid var(--c64-border); padding:12px; border-radius:6px; z-index:1000; max-width:240px;}
+.helpPopup h3{margin-top:0;font-size:14px}
+
 
   /* Drum machine */
   .drums{display:grid; grid-template-columns:180px repeat(16,1fr); gap:8px; align-items:center}
@@ -260,6 +263,18 @@
       <div class="block">
         <div class="title">Instrument edit: <span id="instName">Default</span><button class="c64-btn" id="openFx" title="Open FX options">FX</button></div>
     <!-- Engine toggle moved to top bar -->
+    <div class="synthSection" id="octSection">
+      <div class="sectionHeader"><span>Octave</span><button class="cardHelp" data-help="oct">?</button></div>
+      <div class="ctrlCard" id="octCard">
+        <div class="ctrls">
+          <div class="octControls" title="Octave (, lowers, . raises)">
+            <button class="c64-btn" id="octDown" title="Octave down (,)" >&lt;</button>
+            <span class="pill" id="octDisp">0</span>
+            <button class="c64-btn" id="octUp" title="Octave up (.)" >&gt;</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="synthSection" id="oscSection">
       <div class="sectionHeader"><span>Oscillator</span><button class="cardHelp" data-help="osc">?</button></div>
       <div class="ctrlCard" id="oscCard">
@@ -351,18 +366,6 @@
       <label title="Arpeggiator rate (steps per second)"><span>Rate</span><input id="arpRate" type="range" min="1" max="24" step="1" value="12"></label>
       <label title="Arpeggiator gate (fraction of step)"><span>Gate</span><input id="arpGate" type="range" min="0.1" max="1" step="0.05" value="0.5"></label>
     </div>
-      </div>
-    </div>
-    <div class="synthSection" id="octSection">
-      <div class="sectionHeader"><span>Octave</span><button class="cardHelp" data-help="oct">?</button></div>
-      <div class="ctrlCard" id="octCard">
-        <div class="ctrls">
-          <div class="octControls" title="Octave (, lowers, . raises)">
-            <button class="c64-btn" id="octDown" title="Octave down (,)" >&lt;</button>
-            <span class="pill" id="octDisp">0</span>
-            <button class="c64-btn" id="octUp" title="Octave up (.)" >&gt;</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -1498,22 +1501,35 @@ initBootIntro();
 const helpBtn=get('helpBtn');
 const helpModal=get('helpModal');
 const helpClose=get('helpClose');
-const helpPanel=get('helpPanel');
-function openHelp(section){
-  helpModal.classList.add('show');
-  const sections=helpPanel.querySelectorAll('section');
-  if(section){ sections.forEach(s=>s.style.display = s.id==='help-'+section ? 'block':'none'); }
-  else{ sections.forEach(s=>s.style.display='block'); }
+let helpPopup=null;
+function openHelp(section, anchor){
+  if(section && anchor){
+    if(helpPopup) helpPopup.remove();
+    const src=document.querySelector('#help-'+section);
+    if(!src) return;
+    const pop=document.createElement('div');
+    pop.className='helpPopup';
+    pop.innerHTML=src.innerHTML;
+    document.body.appendChild(pop);
+    const rect=anchor.getBoundingClientRect();
+    pop.style.left=(rect.right+8+window.scrollX)+'px';
+    pop.style.top=(rect.top+window.scrollY)+'px';
+    helpPopup=pop;
+    const close=e=>{ if(!pop.contains(e.target) && e.target!==anchor){ pop.remove(); helpPopup=null; document.removeEventListener('click',close); }};
+    setTimeout(()=>document.addEventListener('click', close));
+  }else{
+    if(helpPopup){ helpPopup.remove(); helpPopup=null; }
+    helpModal.classList.add('show');
+  }
 }
 function closeHelp(){
   helpModal.classList.remove('show');
-  helpPanel.querySelectorAll('section').forEach(s=>s.style.display='block');
 }
 if(helpBtn && helpModal && helpClose){
   helpBtn.addEventListener('click', ()=>openHelp());
   helpClose.addEventListener('click', closeHelp);
   helpModal.addEventListener('click', e=>{ if(e.target===helpModal) closeHelp(); });
-  document.querySelectorAll('.cardHelp').forEach(b=>b.addEventListener('click', ()=>openHelp(b.dataset.help)));
+  document.querySelectorAll('.cardHelp').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); openHelp(b.dataset.help, b); }));
 }
 </script>
 </body>
