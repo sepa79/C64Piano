@@ -440,6 +440,9 @@
     <label style="display:flex;align-items:center;gap:4px">Track
       <select id="drumPatternSel"></select>
     </label>
+    <label style="display:flex;align-items:center;gap:4px" title="16 steps × n bars">Len
+      <input id="drumLen" type="number" min="1" value="1" style="width:3em">
+    </label>
     <button class="c64-btn" id="saveDrumBtn" title="Save drum track">Save</button>
     <button class="c64-btn" id="loadDrumBtn" title="Load drum track">Load</button>
     <button class="c64-btn" id="clearDrumBtn" title="Clear drum track">✖</button>
@@ -791,6 +794,7 @@ const loadBtn = get('loadPatternBtn');
 const patternSel = get('patternSel');
 const stepResSel = get('stepResSel');
 const patternLenInput = get('patternLen');
+const drumLenInput = get('drumLen');
 const patternStatus = get('patternStatus');
 
 // Pattern editor note data
@@ -809,6 +813,10 @@ function removeOverlaps(entry){
 
 function gridCols(){
   return (parseInt(stepResSel.value)||16) * (parseInt(patternLenInput.value)||1);
+}
+
+function drumCols(){
+  return 16 * (parseInt(drumLenInput.value)||1);
 }
 
 function stepSeconds(){
@@ -1005,8 +1013,9 @@ function deleteNoteAtCursor(){
 
 patternGrid.addEventListener('mousedown', startDrag);
 
-stepResSel.addEventListener('change', ()=>{ buildPatternGrid(); buildGrid(); voices.forEach((_,i)=>renderTracker(i)); });
-patternLenInput.addEventListener('input', ()=>{ buildPatternGrid(); buildGrid(); voices.forEach((_,i)=>renderTracker(i)); });
+stepResSel.addEventListener('change', ()=>{ buildPatternGrid(); voices.forEach((_,i)=>renderTracker(i)); });
+patternLenInput.addEventListener('input', ()=>{ buildPatternGrid(); voices.forEach((_,i)=>renderTracker(i)); });
+drumLenInput.addEventListener('input', ()=>{ buildGrid(); });
 
 buildPatternGrid();
 
@@ -1724,7 +1733,7 @@ get('master').addEventListener('input', e=>{
 
 // ======= Drum machine =======
 const drumGrid=get('drums');
-let drumSteps=gridCols();
+let drumSteps=drumCols();
 let rowInstruments=['Snare','Kick','Hat','Tom'];
 const drumInstruments=['Kick','Snare','Hat','Tom','Clap','Cowbell'];
 let pattern={0:Array(drumSteps).fill(false),1:Array(drumSteps).fill(false),2:Array(drumSteps).fill(false),3:Array(drumSteps).fill(false)};
@@ -1733,7 +1742,7 @@ const drumPatternNames=Array(8).fill(0).map((_,i)=>'Drum '+(i+1));
 let drumIndex=0;
 
 function buildGrid(){
-  drumSteps=gridCols();
+  drumSteps=drumCols();
   for(let r=0;r<4;r++){
     pattern[r]=pattern[r]||[];
     if(pattern[r].length<drumSteps) pattern[r]=pattern[r].concat(Array(drumSteps-pattern[r].length).fill(false));
@@ -1761,14 +1770,15 @@ function populateDrumSelect(){
 function showDrumPattern(){
   const data=drumPatterns[drumIndex];
   if(data && data.pattern){
-    drumSteps=data.steps||gridCols();
+    drumSteps=data.steps||drumCols();
     pattern=JSON.parse(JSON.stringify(data.pattern));
     rowInstruments=[...data.instruments];
   }else{
-    drumSteps=gridCols();
+    drumSteps=drumCols();
     pattern={0:Array(drumSteps).fill(false),1:Array(drumSteps).fill(false),2:Array(drumSteps).fill(false),3:Array(drumSteps).fill(false)};
     rowInstruments=['Snare','Kick','Hat','Tom'];
   }
+  drumLenInput.value=Math.max(1,Math.ceil(drumSteps/16));
   buildGrid();
 }
 function saveDrumPattern(){
