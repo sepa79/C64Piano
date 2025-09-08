@@ -113,9 +113,10 @@
   .miniWrap{display:flex; gap:12px; align-items:center}
   canvas.mini{background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(255,255,255,0.05)); border:2px solid var(--c64-border); border-radius:8px; backdrop-filter: blur(1px); box-shadow:0 4px 14px rgba(0,0,0,0.25)}
   .ctrlCard{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
-  .ctrlCard .ctrls{display:flex;flex-direction:column;gap:6px;min-width:180px}
+  .ctrlCard .ctrls{display:flex;flex-direction:column;gap:6px;min-width:180px;flex:1}
   .ctrlCard .ctrls label{display:flex;align-items:center;gap:6px;width:100%}
-  .ctrlCard .ctrls label span{width:70px;text-align:left}
+  .ctrlCard .ctrls label span{width:80px;text-align:left}
+  .ctrlCard .ctrls label select{flex:1}
   .sliderWrap{display:flex;align-items:center;gap:6px;flex:1}
   .sliderWrap input[type=range]{flex:1}
   .sliderWrap input[type=number]{width:60px;background:var(--c64-bg);color:var(--c64-fg);border:1px solid var(--c64-border);border-radius:4px;padding:2px}
