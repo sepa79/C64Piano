@@ -48,8 +48,8 @@ The intention is that the **Track Editor** in the middle creates/edit tracks, an
 
 ---
 
-## Bottom Drum Machine (full width of left + middle regions)
-- A wide strip aligned under the left and middle regions.
+## Bottom Drum Machine (middle region bottom)
+- A strip aligned under the middle region.
 - Header includes **Voice selection** (which synth voice will render drum events) and **Length** selection (16 / 32 / 64 steps).
 - The grid shows **four rows** (Kick, Snare, Hat, Tom) with step buttons across. It defaults to 16 or 32 visible steps but adapts to the selected length.
 - Interaction in this area is independent of the Track Editor length; the drum length is set by its own selector here.
