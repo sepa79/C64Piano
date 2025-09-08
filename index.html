@@ -48,6 +48,13 @@
     );
     mix-blend-mode:multiply;
   }
+  body::after{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    box-shadow:0 0 0 40px #0000aa inset;
+    z-index:10000;
+  }
 
   /* Background oscilloscopes */
   #oscWrap{position:fixed; inset:0; display:flex; flex-direction:column; z-index:0; pointer-events:none;}
@@ -174,9 +181,9 @@
   .patternStatus{margin-top:4px; font-size:12px;}
 
 /* Boot overlay */
-#bootOverlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace; background:#0000aa; color:#b3caff; padding:40px; box-sizing:border-box; transform-origin:center;}
+#bootOverlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999; flex-direction:column; font-family:"C64 Pro Mono", monospace; background:#0022b8; color:#b3caff; transform-origin:center;}
 #bootOverlay::before{content:""; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(0,0,0,0.12) 0, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 3px); mix-blend-mode:multiply; opacity:.35;}
-#bootPanel{background:#0022b8; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:left; font-size:24px;}
+#bootPanel{width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:left; font-size:24px; padding:40px; box-sizing:border-box;}
 #bootText{white-space:pre-wrap; line-height:1.4; width:100%;}
 #bootCursor{display:inline-block; width:12px; height:1em; background:currentColor; margin-left:4px; animation:blink 1s steps(1) infinite;}
 @keyframes blink{50%{opacity:0;}}
@@ -1320,10 +1327,7 @@ function initBootIntro(){
   cursor.before(header);
   cursor.before(document.createTextNode('READY.\n\n'));
 
-  const typingDone=runTypingSequence(cursor).then(()=>{
-    controls.style.display='flex';
-    startBtn.focus();
-  });
+  const typingDone=runTypingSequence(cursor, controls, startBtn);
 
   function keyHandler(e){
     if(controls.style.display!=='none' && e.key==='Enter'){
@@ -1343,7 +1347,7 @@ function initBootIntro(){
   startBtn.addEventListener('click', start);
   window.addEventListener('keydown', keyHandler);
 }
-async function runTypingSequence(cursor){
+async function runTypingSequence(cursor, controls, startBtn){
   const lines=[
     'LOAD "C64 PIANO",8,1',
     'RUN'
@@ -1357,6 +1361,22 @@ async function runTypingSequence(cursor){
     cursor.before(document.createTextNode('\n'));
   }
   await delay(500);
+  cursor.style.display='none';
+  const msg='PRESS RETURN TO ENABLE SOUND';
+  const msgEl=document.createElement('div');
+  cursor.before(msgEl);
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?*#$%';
+  for(let i=0;i<20;i++){
+    let out='';
+    for(let j=0;j<msg.length;j++){
+      out+=Math.random()<i/20?msg[j]:chars[Math.floor(Math.random()*chars.length)];
+    }
+    msgEl.textContent=out;
+    await delay(50);
+  }
+  msgEl.textContent=msg;
+  controls.style.display='flex';
+  startBtn.focus();
 }
 
 
