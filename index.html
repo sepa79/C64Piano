@@ -128,6 +128,10 @@
   .ctrlCard .topRow{display:flex;gap:12px;align-items:flex-start}
   .ctrlCard .topRow .ctrls{flex:0 0 auto;min-width:180px}
   .ctrlCard .sliderCol{width:100%}
+  #instCard{flex-direction:column;flex:0 0 140px}
+  #instCard .ctrls{min-width:0;gap:4px}
+  #instCard label span{width:auto}
+  #instCard .row{display:flex;gap:4px}
   .octControls{display:flex;align-items:center;gap:6px;justify-content:center}
   .octBtns{display:flex;gap:4px}
   .octBtns button.active{background:var(--c64-fg);color:#201050}
@@ -408,6 +412,16 @@
         <div id="pianoTab" class="tabContent active">
   <div class="title">C64 Piano — Keyboard<button class="cardHelp" data-help="keyboard">?</button></div>
   <div class="kbdWrap">
+    <div class="ctrlCard" id="instCard">
+      <div class="ctrls">
+        <label><span>Instrument</span><select id="instrumentSel"></select></label>
+        <div class="row">
+          <button class="c64-btn" id="instLoadBtn" title="Load instrument">⬇</button>
+          <button class="c64-btn" id="instSaveBtn" title="Save instrument">💾</button>
+          <button class="c64-btn" id="instSaveAsBtn" title="Save instrument as">✎</button>
+        </div>
+      </div>
+    </div>
     <div class="kbd" id="kbd">
       <div class="key white" data-note="C" data-key="A"><span class="kLabel">C</span><span class="hint" title="Press A">A</span></div>
       <div class="key white" data-note="D" data-key="S"><span class="kLabel">D</span><span class="hint" title="Press S">S</span></div>
@@ -480,11 +494,7 @@
           </div>
         </div>
         <div id="fxTab" class="tabContent">
-          <div class="row" style="align-items:center;gap:6px">
-            <label>Instrument <select id="instrumentSel"></select></label>
-            <button class="c64-btn" id="instLoadBtn">Load</button>
-            <button class="c64-btn" id="instSaveBtn">Save</button>
-            <button class="c64-btn" id="instSaveAsBtn">Save As</button>
+          <div class="row" style="justify-content:flex-end">
             <button class="cardHelp" data-help="fx">?</button>
           </div>
           <div class="row">
@@ -1181,7 +1191,14 @@ function attachNumberInputs(){
 }
 attachNumberInputs();
 
+const sampleInstruments={
+  'Bright Lead':{wave:'sawtooth',vibRate:6,vibAmt:12,filter:'highpass',cutoff:2000,res:3,A:5,D:120,S:0.5,R:200},
+  'Soft Pad':{wave:'triangle',vibRate:4,vibAmt:6,filter:'lowpass',cutoff:1000,res:1.5,A:30,D:400,S:0.7,R:600},
+  'Chiptune Bass':{wave:'pulse',pw:0.25,pwmRate:0.6,pwmDepth:0.08,vibRate:0,vibAmt:0,filter:'lowpass',cutoff:600,res:2,A:3,D:80,S:0.4,R:80}
+};
 let instruments=JSON.parse(localStorage.getItem('instruments')||'{}');
+Object.entries(sampleInstruments).forEach(([k,v])=>{ if(!instruments[k]) instruments[k]=v; });
+localStorage.setItem('instruments',JSON.stringify(instruments));
 const instSel=get('instrumentSel');
 const instName=get('instName');
 function populateInstrumentSelect(){
@@ -1336,29 +1353,37 @@ const wavePresets = {
     'PWM Lead': { pw:0.5, pwmRate:3, pwmDepth:0.25, vibRate:5, vibAmt:8 },
     'Chiptune Bass': { pw:0.25, pwmRate:0.6, pwmDepth:0.08, vibRate:0, vibAmt:0 },
     'Detuned PWM': { pw:0.45, pwmRate:5, pwmDepth:0.35, vibRate:7, vibAmt:12 },
+    'Thin Pulse': { pw:0.2, pwmRate:0, pwmDepth:0, vibRate:0, vibAmt:0 },
+    'Wide Pulse': { pw:0.8, pwmRate:0, pwmDepth:0, vibRate:0, vibAmt:0 },
   },
   sawtooth: {
     'Init': { vibRate:0, vibAmt:0 },
     'SID Brass': { vibRate:5, vibAmt:10 },
     'Razor Lead': { vibRate:7, vibAmt:14 },
+    'Super Saw': { vibRate:6, vibAmt:12 },
   },
   triangle: {
     'Init': { vibRate:0, vibAmt:0 },
     'Soft Bell': { vibRate:5, vibAmt:6 },
     'Flute': { vibRate:6, vibAmt:8 },
+    'Organ': { vibRate:0, vibAmt:0 },
   },
   noise: {
     'Init': {},
     'Hi‑Hat': {},
     'Snare': {},
+    'Crash': {},
   }
 };
 
 const filterPresets = {
   'Bright LP': { type:'lowpass', cutoff:4000, res:2 },
   'Muffled': { type:'lowpass', cutoff:800, res:1.2 },
+  'Deep LP': { type:'lowpass', cutoff:500, res:4 },
   'Nasal BP': { type:'bandpass', cutoff:1500, res:8 },
+  'Wide BP': { type:'bandpass', cutoff:1000, res:2 },
   'Thin HP': { type:'highpass', cutoff:1200, res:1.5 },
+  'Bright HP': { type:'highpass', cutoff:2000, res:0.8 },
   'Off': { type:'off' }
 };
 
