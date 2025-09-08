@@ -387,6 +387,7 @@ class SIDProcessor extends AudioWorkletProcessor {
     this.ready=false;
     this.eventQueue=[];
     this.params={pwmRate:0,pwmDepth:0,vibRate:0,vibCents:0,master:0.2};
+    this.activeVoices=0;
     this.silentCount=0;
     this.port.onmessage = async e=>{
       const d=e.data;
@@ -413,8 +414,14 @@ class SIDProcessor extends AudioWorkletProcessor {
     if(!this.ready){ out.fill(0); return true; }
     let ev;
     while((ev=this.eventQueue.shift())){
-      if(ev.type==='noteOn') this.exports.note_on(ev.voice,ev.freq,ev.pw,ev.a,ev.d,ev.s,ev.r);
-      else if(ev.type==='noteOff') this.exports.note_off(ev.voice);
+      if(ev.type==='noteOn') {
+        this.exports.note_on(ev.voice,ev.freq,ev.pw,ev.a,ev.d,ev.s,ev.r);
+        this.activeVoices++;
+      }
+      else if(ev.type==='noteOff') {
+        this.exports.note_off(ev.voice);
+        if(this.activeVoices>0) this.activeVoices--;
+      }
       else if(ev.type==='setFilter') this.exports.set_filter(ev.mode,ev.cutoff,ev.q);
       else if(ev.type==='setGlobal'){ this.params=ev; this.exports.set_global(ev.pwmRate,ev.pwmDepth,ev.vibRate,ev.vibCents,ev.master); }
       else if(ev.type==='setMaster'){ this.params.master=ev.master; this.exports.set_global(this.params.pwmRate,this.params.pwmDepth,this.params.vibRate,this.params.vibCents,ev.master); }
@@ -423,8 +430,9 @@ class SIDProcessor extends AudioWorkletProcessor {
     out.set(this.mem.subarray(this.ptr>>2,(this.ptr>>2)+out.length));
     let silent=true;
     for(let i=0;i<out.length;i++){ if(out[i]!==0){ silent=false; break; } }
-    if(silent){ if(++this.silentCount>50){ this.port.postMessage({type:'underrun'}); this.silentCount=0; } }
-    else this.silentCount=0;
+    if(silent && this.activeVoices>0){
+      if(++this.silentCount>50){ this.port.postMessage({type:'underrun'}); this.silentCount=0; }
+    } else this.silentCount=0;
     return true;
   }
 }
@@ -482,12 +490,13 @@ async function setEngine(type){
           node.port.onmessage=e=>{
             const t=e.data.type;
             if(t==='wasmReady') console.log('WASM ready');
-            else if(t==='underrun') console.warn('SID underrun');
-            else if(t==='wasmError'){
-              console.warn('WASM error', e.data.message);
-              showBanner('WASM \u2192 JS');
-              setEngine('js');
-            }
+              else if(t==='underrun')
+                console.warn('SID underrun');
+              else if(t==='wasmError'){
+                console.warn('WASM error', e.data.message);
+                showBanner('WASM \u2192 JS');
+                setEngine('js');
+              }
           };
           v.sidNode=node; v.nextId=0;
         }
