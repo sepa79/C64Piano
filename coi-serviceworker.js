@@ -27,35 +27,43 @@ if (typeof window === 'undefined') {
             return;
         }
 
+        const isHTMLNavigation = r.mode === "navigate"
+            || r.destination === "document"
+            || ((r.headers.get("accept") || "").includes("text/html"));
+
         const request = (coepCredentialless && r.mode === "no-cors")
             ? new Request(r, {
                 credentials: "omit",
             })
             : r;
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    if (response.status === 0) {
-                        return response;
-                    }
 
-                    const newHeaders = new Headers(response.headers);
-                    newHeaders.set("Cross-Origin-Embedder-Policy",
-                        coepCredentialless ? "credentialless" : "require-corp"
-                    );
-                    if (!coepCredentialless) {
-                        newHeaders.set("Cross-Origin-Resource-Policy", "cross-origin");
-                    }
-                    newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
+        if (!isHTMLNavigation) {
+            event.respondWith(fetch(request));
+            return;
+        }
 
-                    return new Response(response.body, {
-                        status: response.status,
-                        statusText: response.statusText,
-                        headers: newHeaders,
-                    });
-                })
-                .catch((e) => console.error(e))
-        );
+        event.respondWith((async () => {
+            try {
+                const response = await fetch(request);
+                if (response.status === 0) {
+                    return response;
+                }
+
+                const newHeaders = new Headers(response.headers);
+                newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
+                newHeaders.set("Cross-Origin-Embedder-Policy", "require-corp");
+                newHeaders.set("Cross-Origin-Resource-Policy", "same-origin");
+
+                return new Response(response.body, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: newHeaders,
+                });
+            } catch (e) {
+                console.error(e);
+                throw e;
+            }
+        })());
     });
 
 } else {
