@@ -539,6 +539,14 @@
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const ctx = new AudioContext({ latencyHint: 'interactive' });
 let audioReady=false;
+if ('serviceWorker' in navigator){
+  let reloadingForCOI=false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(reloadingForCOI || window.crossOriginIsolated) return;
+    reloadingForCOI=true;
+    window.location.reload();
+  });
+}
 async function unlockAudio(){
   if(audioReady) return;
   try{
