@@ -55,8 +55,6 @@
   .row label{font-size:12px; display:flex; gap:6px; align-items:center}
   .title{font-weight:800; margin:0 0 10px 0; font-size:15px; letter-spacing:0.6px; text-shadow:0 1px 0 rgba(0,0,0,0.35); display:flex; justify-content:space-between; align-items:center; gap:6px}
 
-  .pill{padding:4px 10px; border-radius:999px; background:rgba(169,187,255,0.15); border:1px solid var(--c64-border); font-size:12px}
-  .pill.glow{box-shadow:0 0 0 2px var(--glow) inset}
 
   .c64-window {
     width:100vw;
@@ -248,8 +246,8 @@
     <section id="help-arp"><h3>Arpeggiator</h3><p>Cycle held notes using mode, rate, and gate settings.</p></section>
     <section id="help-oct"><h3>Octave</h3><p>Shift the keyboard range with the arrow buttons or , and . keys.</p></section>
     <section id="help-keyboard"><h3>Keyboard</h3><p>Play with A–K and W–U keys or click; use &lt; / &gt; or , / . for octave.</p></section>
-    <section id="help-track"><h3>Track Editor</h3><p>Edit patterns; global length sets default size. Use arrow keys to move, Enter to insert notes, and Delete/Backspace to remove.</p></section>
-    <section id="help-fx"><h3>FX</h3><p>Choose instruments and adjust Delay, Chorus, Crush, and Drive.</p></section>
+    <section id="help-track"><h3>Track Editor</h3><p>Edit patterns with the grid. Use arrow keys to move, Enter to insert notes, and Delete/Backspace to remove.</p></section>
+    <section id="help-fx"><h3>FX</h3><p>Choose instruments and manage your presets with the load/save controls.</p></section>
     <section id="help-trackers"><h3>Trackers</h3><p>Right column shows two voice trackers referencing patterns.</p></section>
     <section id="help-drums"><h3>Drum Machine</h3><p>Program Kick, Snare, Hat, and Tom steps with its own length.</p></section>
     <button class="c64-btn" id="helpClose">Close</button>
@@ -260,18 +258,11 @@
   <div class="c64-title">C64 PIANO / TRACKER</div>
   <div id="topBar" class="block">
     <div class="row">
-      <label>Project <select id="projectSel"></select></label>
       <label>Engine <select id="engineSel"></select></label>
-      <label>Global Track Length <input id="globalTrackLen" type="number" min="1" value="16"></label>
-      <label>Quantize <input id="quantize" type="number" min="1" value="1"></label>
-      <button class="c64-btn" id="loadBtnTop">Load</button>
-      <button class="c64-btn" id="saveBtnTop">Save</button>
-      <button class="c64-btn" id="saveAsBtnTop">Save As</button>
       <button class="c64-btn" id="helpBtn" title="Show help">Help</button>
       <div class="transport" style="margin-left:auto">
         <button class="c64-btn" id="transportPlay" title="Play">▶</button>
         <button class="c64-btn" id="transportStop" title="Stop">■</button>
-        <span class="pill" id="transportStatus">●</span>
       </div>
     </div>
   </div>
@@ -498,12 +489,6 @@
             <button class="c64-btn" id="instSaveAsBtn" title="Save instrument as">✎</button>
             <button class="cardHelp" data-help="fx">?</button>
           </div>
-          <div class="row">
-            <label>Delay <input id="fxDelay" type="range" min="0" max="1" step="0.01" value="0"></label>
-            <label>Chorus <input id="fxChorus" type="range" min="0" max="1" step="0.01" value="0"></label>
-            <label>Bit/Crush <input id="fxCrush" type="checkbox"></label>
-            <label>Drive <input id="fxDrive" type="range" min="0" max="1" step="0.01" value="0"></label>
-          </div>
         </div>
       </div>
     </div>
@@ -552,7 +537,6 @@ async function unlockAudio(){
     osc.stop(now+0.21);
     await new Promise(r=>osc.onended=r);
     audioReady=true;
-    state.audioReady=true;
     console.log('Audio unlocked', ctx.state, ctx.sampleRate);
   }catch(e){ console.warn('Audio unlock failed', e); }
 }
@@ -561,13 +545,10 @@ const get = (id)=>document.getElementById(id);
 function valNum(id, fallback=0){ const el=get(id); return el?parseFloat(el.value):fallback; }
 const master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
 
-const filterModeMap = { off:0, lowpass:1, highpass:2, bandpass:3 };
-
 // Global synth state
 const state = {
   wave: 'pulse',
   filter: 'lowpass',
-  audioReady: false,
   engine: 'classic'
 };
 const ENGINE_STORAGE_KEY = 'c64piano_engine';
@@ -576,16 +557,7 @@ const engineSel = get('engineSel');
 function toNumber(value){ return typeof value==='number'?value:parseFloat(value); }
 function finiteOr(value, fallback){ const num=toNumber(value); return Number.isFinite(num)?num:fallback; }
 function clampValue(value, min, max){ return Math.min(max, Math.max(min, value)); }
-function sanitizeFrequency(v){ return clampValue(finiteOr(v, 440), 1, 20000); }
-function sanitizePulseWidth(v){ return clampValue(finiteOr(v, 0.5), 0.02, 0.98); }
-function sanitizeAdsr(v, fallback){ return Math.max(0, finiteOr(v, fallback)); }
-function sanitizeSustain(v){ return clampValue(finiteOr(v, 0.5), 0, 1); }
-function sanitizeLfoRate(v){ return Math.max(0, finiteOr(v, 0)); }
-function sanitizeLfoDepth(v){ return clampValue(finiteOr(v, 0), -2400, 2400); }
-function sanitizePwmDepth(v){ return clampValue(finiteOr(v, 0), 0, 0.96); }
 function sanitizeMaster(v){ return clampValue(finiteOr(v, 0.2), 0, 1.5); }
-function sanitizeCutoff(v){ return clampValue(finiteOr(v, 1000), 20, 20000); }
-function sanitizeResonance(v){ return clampValue(finiteOr(v, 1), 0.1, 20); }
 
 // Voices and oscilloscopes
 const oscWrap = document.getElementById('oscWrap');
