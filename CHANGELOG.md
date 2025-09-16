@@ -3,6 +3,7 @@
 ## Unreleased
 - Removed the WebAssembly synth engine and AudioWorklet pipeline; the app now always uses the JavaScript synth.
 - Removed the COOP/COEP service worker, `_headers`, and WASM diagnostics artifacts.
+- Added a selectable pure JavaScript SID engine alongside the hybrid WebAudio synth.
 
 ## 0.4.0
 - Added instrument preset picker card with built-in "Bright Lead," "Soft Pad," and "Chiptune Bass" examples.

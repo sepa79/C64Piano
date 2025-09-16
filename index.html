@@ -261,6 +261,7 @@
   <div id="topBar" class="block">
     <div class="row">
       <label>Project <select id="projectSel"></select></label>
+      <label>Engine <select id="engineSel"></select></label>
       <label>Global Track Length <input id="globalTrackLen" type="number" min="1" value="16"></label>
       <label>Quantize <input id="quantize" type="number" min="1" value="1"></label>
       <button class="c64-btn" id="loadBtnTop">Load</button>
@@ -566,8 +567,11 @@ const filterModeMap = { off:0, lowpass:1, highpass:2, bandpass:3 };
 const state = {
   wave: 'pulse',
   filter: 'lowpass',
-  audioReady: false
+  audioReady: false,
+  engine: 'classic'
 };
+const ENGINE_STORAGE_KEY = 'c64piano_engine';
+const engineSel = get('engineSel');
 
 function toNumber(value){ return typeof value==='number'?value:parseFloat(value); }
 function finiteOr(value, fallback){ const num=toNumber(value); return Number.isFinite(num)?num:fallback; }
@@ -1243,6 +1247,7 @@ async function runTypingSequence(cursor, controls, startBtn){
 // Bit‑crusher flavor (8‑bit)
 function makeCrusher(bits=8){ const steps = 2**bits; const curve = new Float32Array(65536); for(let i=0;i<curve.length;i++){ const x=i/65535*2-1; const q=Math.round((x*0.5+0.5)*(steps-1))/(steps-1); curve[i]=(q-0.5)*2;} const sh=ctx.createWaveShaper(); sh.curve=curve; sh.oversample='4x'; return sh; }
 let crusher = makeCrusher(8);
+const crusherOutputs = new WeakSet();
 
 // Base note frequencies (A4=440)
 const baseFreq = { 'C':261.63,'C#':277.18,'D':293.66,'D#':311.13,'E':329.63,'F':349.23,'F#':369.99,'G':392.00,'G#':415.30,'A':440.00,'A#':466.16,'B':493.88,'C2':523.25 };
@@ -1310,6 +1315,32 @@ const adsrPresets = {
   'Bass':  { A:3, D:100, S:0.3, R:80 }
 };
 
+const engines = {
+  classic: { id:'classic', label:'Hybrid JS Synth', create:(note, voice)=>createClassicVoice(note, voice) },
+  jssid:   { id:'jssid',   label:'JS SID Engine', create:(note, voice)=>createJsSidVoice(note, voice) }
+};
+
+function populateEngineSelect(){
+  if(!engineSel) return;
+  engineSel.innerHTML='';
+  Object.values(engines).forEach(engine=>{
+    const opt=document.createElement('option');
+    opt.value=engine.id;
+    opt.textContent=engine.label;
+    engineSel.appendChild(opt);
+  });
+}
+
+function setEngine(id, {persist=false}={}){
+  const key=engines[id]?id:'classic';
+  state.engine=key;
+  if(engineSel) engineSel.value=key;
+  if(persist){
+    try{ localStorage.setItem(ENGINE_STORAGE_KEY, key); }
+    catch(e){ /* ignore storage errors */ }
+  }
+}
+
 function setWaveButtons(type){
   document.querySelectorAll('#waveBtns .segBtn').forEach(b=>{
     b.classList.toggle('active', b.dataset.wave===type);
@@ -1367,6 +1398,7 @@ function applyFilterPreset(){
 
 function snapshotParams(){
   return {
+    engine: state.engine,
     wave: state.wave,
     pw: valNum('sidPW',0.5),
     pwmRate: valNum('sidPWMRate',3),
@@ -1388,6 +1420,7 @@ function snapshotParams(){
 function applyParams(p){
   if(!p) return;
   const setVal=(id,val)=>{ const el=get(id); if(el!=null && val!=null){ el.value=val; el.dispatchEvent(new Event('input')); } };
+  if(p.engine) setEngine(p.engine);
   setWaveButtons(p.wave||'pulse');
   setVal('sidPW',p.pw);
   setVal('sidPWMRate',p.pwmRate);
@@ -1479,8 +1512,8 @@ function updateADSRVis(){
   g.stroke();
 }
 
-// ======= Synth voice =======
-function createSIDVoice(note, voice=voices[0]){
+// ======= Synth voices =======
+function createClassicVoice(note, voice=voices[0]){
   ensureAudio();
   const now=ctx.currentTime; const f=freqFor(note);
   const waveSel=state.wave; const cutoff=valNum('sidCutoff',1700); const res=valNum('sidRes',5);
@@ -1547,9 +1580,158 @@ function createSIDVoice(note, voice=voices[0]){
   return { stop:()=>{ const t=ctx.currentTime; vca.gain.setTargetAtTime(0.0001,t,Math.max(0.01,R)); source.stop(t+R+0.03); if(pwmTimer) clearInterval(pwmTimer); if(vib) vib.stop(t+0.01); if(arpTimer) clearInterval(arpTimer); } };
 }
 
+function createJsSidVoice(note, voice=voices[0]){
+  if(typeof ctx.createScriptProcessor!=="function"){
+    console.warn('ScriptProcessor not supported; falling back to classic engine');
+    return createClassicVoice(note, voice);
+  }
+  ensureAudio();
+  const sampleRate=ctx.sampleRate;
+  const baseFreq=freqFor(note);
+  const waveSel=state.wave;
+  const cutoff=valNum('sidCutoff',1700);
+  const res=valNum('sidRes',5);
+  const crushOn=get('crush')?get('crush').checked:false;
+  const A=Math.max(0.0001, valNum('sidA',8)/1000);
+  const D=Math.max(0.0001, valNum('sidD',120)/1000);
+  const S=Math.min(1, Math.max(0, valNum('sidS',0.5)));
+  const R=Math.max(0.0001, valNum('sidR',240)/1000);
+  const vibRate=Math.max(0, valNum('vibRate',5));
+  const vibAmt=Math.max(0, valNum('vibAmt',8));
+  const pwmBase=Math.min(0.98, Math.max(0.02, valNum('sidPW',0.5)));
+  const pwmRate=Math.max(0, valNum('sidPWMRate',3));
+  const pwmDepth=Math.max(0, Math.min(0.45, valNum('sidPWMDepth',0.25)));
+  const filterMode=state.filter;
+
+  const script=ctx.createScriptProcessor(1024,0,1);
+  const mixGain=ctx.createGain();
+  mixGain.gain.value=0.85;
+  script.connect(mixGain);
+  if(crushOn){
+    mixGain.connect(crusher);
+    if(!crusherOutputs.has(voice.gain)){
+      crusher.connect(voice.gain);
+      crusherOutputs.add(voice.gain);
+    }
+  } else {
+    mixGain.connect(voice.gain);
+  }
+
+  const attackSamples=Math.max(1, Math.round(A*sampleRate));
+  const decaySamples=Math.max(1, Math.round(D*sampleRate));
+  const sustainLevel=S;
+  const releaseSamples=Math.max(1, Math.round(R*sampleRate));
+  const vibDepth=vibAmt/1200;
+  let sampleIndex=0;
+  let phase=0;
+  let releaseStart=null;
+  let releaseLevel=sustainLevel;
+  let lastEnv=0;
+  let finished=false;
+  let noiseSeed=0x1234567;
+  let lp=0, bp=0;
+  const filterOn=filterMode && filterMode!=='off';
+  const cutoffHz=filterOn?clampValue(cutoff,20,sampleRate/2-100):0;
+  const filterF=filterOn?Math.min(1.9, 2*Math.sin(Math.PI*Math.min(0.25, cutoffHz/sampleRate))):0;
+  const filterQ=filterOn?Math.max(0.001, 1-Math.min(0.98, res/20)):0;
+  const sustainSilent=sustainLevel<=0.0001;
+
+  const amplitude=filterOn?0.72:0.85;
+
+  function nextNoise(){
+    noiseSeed ^= noiseSeed << 13;
+    noiseSeed ^= noiseSeed >>> 17;
+    noiseSeed ^= noiseSeed << 5;
+    return ((noiseSeed & 0x7fffffff)/0x3fffffff)*2-1;
+  }
+
+  function finalize(){
+    if(finished) return;
+    finished=true;
+    script.disconnect();
+    mixGain.disconnect();
+    script.onaudioprocess=null;
+  }
+
+  script.onaudioprocess=e=>{
+    const out=e.outputBuffer.getChannelData(0);
+    for(let i=0;i<out.length;i++){
+      if(finished){ out[i]=0; continue; }
+      const t=sampleIndex/sampleRate;
+      let freqNow=baseFreq;
+      if(vibRate>0 && vibAmt>0){
+        freqNow*=Math.pow(2, vibDepth*Math.sin(2*Math.PI*vibRate*t));
+      }
+      let pw=pwmBase;
+      if(waveSel==='pulse' && pwmDepth>0 && pwmRate>0){
+        pw=Math.max(0.02, Math.min(0.98, pwmBase+pwmDepth*Math.sin(2*Math.PI*pwmRate*t)));
+      }
+      phase+=freqNow/sampleRate;
+      phase-=Math.floor(phase);
+      let sample;
+      if(waveSel==='sawtooth') sample=2*phase-1;
+      else if(waveSel==='triangle') sample=4*Math.abs(phase-0.5)-1;
+      else if(waveSel==='noise') sample=nextNoise();
+      else sample=phase<pw?1:-1;
+
+      let env;
+      if(releaseStart!==null){
+        const relIdx=sampleIndex-releaseStart;
+        if(relIdx>=releaseSamples){
+          for(let j=i;j<out.length;j++) out[j]=0;
+          finalize();
+          break;
+        }
+        const frac=1-relIdx/releaseSamples;
+        env=releaseLevel*frac;
+      } else if(sampleIndex<attackSamples){
+        env=sampleIndex/attackSamples;
+      } else if(sampleIndex<attackSamples+decaySamples){
+        const pos=(sampleIndex-attackSamples)/Math.max(1,decaySamples);
+        env=1+(sustainLevel-1)*pos;
+      } else {
+        env=sustainLevel;
+        if(sustainSilent){
+          for(let j=i;j<out.length;j++) out[j]=0;
+          finalize();
+          break;
+        }
+      }
+      lastEnv=env;
+      let val=sample*env*amplitude;
+      if(filterOn){
+        const hp=val - lp - filterQ*bp;
+        bp += filterF*hp;
+        lp += filterF*bp;
+        if(filterMode==='lowpass') val=lp;
+        else if(filterMode==='highpass') val=hp;
+        else val=bp;
+      }
+      if(val>1) val=1; else if(val<-1) val=-1;
+      out[i]=val;
+      sampleIndex++;
+    }
+  };
+
+  return {
+    stop(){
+      if(finished) return;
+      if(releaseStart===null){
+        releaseStart=sampleIndex;
+        releaseLevel=lastEnv;
+        if(releaseLevel<=0.0001){
+          finalize();
+        }
+      }
+    }
+  };
+}
+
 function createVoice(note, voice){
   if(ctx.state!=='running') return {stop:()=>{}};
-  return createSIDVoice(note,voice);
+  const engineId=state.engine;
+  const engine=engines[engineId]||engines.classic;
+  return engine.create(note,voice);
 }
 
 // === Piano UI wiring ===
@@ -1739,6 +1921,13 @@ const drumKeyMap={z:0,x:1,c:2,v:3};
 document.addEventListener('keydown',e=>{ const k=e.key.toLowerCase(); if(drumKeyMap.hasOwnProperty(k)){ triggerDrum(['Kick','Snare','Hat','Tom','Clap','Cowbell'].includes(rowInstruments[drumKeyMap[k]])?rowInstruments[drumKeyMap[k]]:'Kick', ctx.currentTime); }});
 
 // ======= Wire up segmented controls & presets =======
+populateEngineSelect();
+let savedEngine=null;
+try{ savedEngine=localStorage.getItem(ENGINE_STORAGE_KEY); }catch(e){ savedEngine=null; }
+setEngine(savedEngine||state.engine);
+if(engineSel){
+  engineSel.addEventListener('change', ()=>setEngine(engineSel.value,{persist:true}));
+}
 // Wave buttons
 Array.from(document.querySelectorAll('#waveBtns .segBtn')).forEach(btn=>{
   btn.addEventListener('click', ()=>{ setWaveButtons(btn.dataset.wave); });

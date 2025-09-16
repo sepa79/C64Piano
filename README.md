@@ -2,6 +2,8 @@
 
 C64Piano is a retro-styled browser piano inspired by the Commodore 64. It showcases a multi-voice tracker, pattern editor, and background waveform oscilloscopes rendered with HTML, CSS, and JavaScript.
 
+An engine selector lets you swap between the hybrid WebAudio synth and a pure JavaScript SID renderer to explore different timbres.
+
 A live demo is available on [GitHub Pages](https://sepa79.github.io/C64Piano/).
 
 ## Version
