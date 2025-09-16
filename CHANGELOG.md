@@ -1,9 +1,8 @@
 # Changelog
 
 ## Unreleased
-- Added WASM loader diagnostics and logging to trace fetches, instantiation, and AudioWorklet timing.
-- Switched the SID worklet to use a prefilled ring buffer with zero-copy ArrayBuffer transfer to avoid underruns.
-- Inline-encode the SID `sid.wasm` bytes as base64 (with optional external fetch) so the loader can transfer zero-copy buffers without shipping binary artifacts, and publish `_headers` to enforce the correct MIME when hosted separately.
+- Removed the WebAssembly synth engine and AudioWorklet pipeline; the app now always uses the JavaScript synth.
+- Removed the COOP/COEP service worker, `_headers`, and WASM diagnostics artifacts.
 
 ## 0.4.0
 - Added instrument preset picker card with built-in "Bright Lead," "Soft Pad," and "Chiptune Bass" examples.

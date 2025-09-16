@@ -10,6 +10,9 @@ Current version: 0.4.0
 
 ## Changelog
 
+### 0.4.1
+- Removed the WebAssembly synth engine and associated service worker; the app always uses the JavaScript synth.
+
 ### 0.4.0
 - Added instrument preset picker card with built-in "Bright Lead," "Soft Pad," and "Chiptune Bass" examples.
 - Expanded waveform templates and filter presets for broader sound design.
@@ -41,13 +44,13 @@ Current version: 0.4.0
 
 ## Development Notes
 
-GitHub Pages cannot set the cross‑origin headers required for `SharedArrayBuffer` or `Atomics` on its own. A bundled [`coi-serviceworker.js`](coi-serviceworker.js) registers a service worker that injects the necessary COOP/COEP headers so the page becomes cross-origin isolated. The SID WebAssembly module is embedded as a base64 string and decoded at runtime when isolation is available.
+The synth now runs entirely in JavaScript, so no service worker or cross-origin isolation headers are required. Audio still unlocks on the first user interaction to comply with browser autoplay policies.
 
 ## Verification Checklist
 
-1. Open https://sepa79.github.io/C64Piano/ and confirm `window.crossOriginIsolated` is `true` in the console.
-2. Switch to the WASM engine and play notes without “SAB not defined” errors.
-3. Ensure the console shows no resources blocked by `Cross-Origin-Embedder-Policy`.
+1. Open https://sepa79.github.io/C64Piano/ and confirm the interface renders without errors.
+2. Play notes with the on-screen keyboard (or mapped keys) to verify the JavaScript synth produces audio.
+3. Check the browser console for errors after playing a few notes.
 
 ## Font License
 

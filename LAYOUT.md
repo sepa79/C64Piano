@@ -10,7 +10,7 @@ The screen is organized into **three vertical regions** with a small **control b
 ---
 
 ## Top Bar (always visible)
-- Shows: **Project** selector (if present), **Backend** selector (e.g., JS / WASM / MIDI), **Global Track Length**, **Quantize**, and **Load / Save / Save As** actions.
+- Shows: **Project** selector (if present), **Global Track Length**, **Quantize**, and **Load / Save / Save As** actions.
 - Provides **Play / Stop** transport on the right with a small status indicator.
 - **No instrument control here** (instrument lives in the FX view described below).
 - Includes a **Help** button that opens a modal with usage instructions.
