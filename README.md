@@ -22,16 +22,9 @@ Current version: 0.4.0
 - Added tabbed middle editor with Track Editor and FX sections for instrument management.
 - Introduced right-side trackers showing selected tracks per voice.
 
-### 0.2.1
-- Fix silent WASM audio on GitHub Pages by unlocking audio on user gesture with a confirmation beep.
-- Move DSP into an AudioWorklet that loads WASM bytes and falls back to the JS synth when needed.
-- Embed the SID WASM binary directly in the page as a base64 string.
-
 ### 0.2.0
 - Applied phosphor-green C64 theme with embedded pixel font and CRT scanlines.
-- Added C64 boot intro overlay with audio unlock and refined WASM warning.
-- Enabled WebAssembly synth engine and fixed related audio issues.
-- Added toggleable JS/WASM engine and file-protocol warning for WASM.
+- Added C64 boot intro overlay with audio unlock messaging.
 
 ### 0.1.0
 - Added background waveform oscilloscope.
@@ -41,13 +34,13 @@ Current version: 0.4.0
 
 ## Development Notes
 
-GitHub Pages cannot set the cross‑origin headers required for `SharedArrayBuffer` or `Atomics` on its own. A bundled [`coi-serviceworker.js`](coi-serviceworker.js) registers a service worker that injects the necessary COOP/COEP headers so the page becomes cross-origin isolated. The SID WebAssembly module is embedded as a base64 string and decoded at runtime when isolation is available.
+The synth now runs entirely in JavaScript using standard Web Audio nodes, so no cross-origin isolation or service worker bootstrapping is required for audio playback.
 
 ## Verification Checklist
 
-1. Open https://sepa79.github.io/C64Piano/ and confirm `window.crossOriginIsolated` is `true` in the console.
-2. Switch to the WASM engine and play notes without “SAB not defined” errors.
-3. Ensure the console shows no resources blocked by `Cross-Origin-Embedder-Policy`.
+1. Open https://sepa79.github.io/C64Piano/ and trigger the "Enable Sound" prompt to unlock audio.
+2. Play notes across the keyboard and verify smooth audio output with no console errors.
+3. Confirm instrument presets load and save without throwing exceptions.
 
 ## Font License
 
