@@ -583,59 +583,164 @@ const state = {
   audioReady: false
 };
 
+function toNumber(value){ return typeof value==='number'?value:parseFloat(value); }
+function finiteOr(value, fallback){ const num=toNumber(value); return Number.isFinite(num)?num:fallback; }
+function clampValue(value, min, max){ return Math.min(max, Math.max(min, value)); }
+function sanitizeFrequency(v){ return clampValue(finiteOr(v, 440), 1, 20000); }
+function sanitizePulseWidth(v){ return clampValue(finiteOr(v, 0.5), 0.02, 0.98); }
+function sanitizeAdsr(v, fallback){ return Math.max(0, finiteOr(v, fallback)); }
+function sanitizeSustain(v){ return clampValue(finiteOr(v, 0.5), 0, 1); }
+function sanitizeLfoRate(v){ return Math.max(0, finiteOr(v, 0)); }
+function sanitizeLfoDepth(v){ return clampValue(finiteOr(v, 0), -2400, 2400); }
+function sanitizePwmDepth(v){ return clampValue(finiteOr(v, 0), 0, 0.96); }
+function sanitizeMaster(v){ return clampValue(finiteOr(v, 0.2), 0, 1.5); }
+function sanitizeCutoff(v){ return clampValue(finiteOr(v, 1000), 20, 20000); }
+function sanitizeResonance(v){ return clampValue(finiteOr(v, 1), 0.1, 20); }
+
 const sidWorkletCode = `
 class SIDProcessor extends AudioWorkletProcessor {
   constructor(){
     super();
     this.ready=false;
+    this.dspReady=false;
     this.eventQueue=[];
     this.params={pwmRate:0,pwmDepth:0,vibRate:0,vibCents:0,master:0.2};
     this.activeVoices=0;
     this.silentCount=0;
-    this.port.onmessage = async e=>{
-      const d=e.data;
-      if(d.type==='loadWasm'){
-        try{
-          const mod=await WebAssembly.compile(d.bytes.buffer);
-          const inst=await WebAssembly.instantiate(mod,{});
-          this.exports=inst.exports;
-          this.mem=new Float32Array(this.exports.memory.buffer);
-          this.ptr=this.exports.get_buffer_ptr();
-          if(this.exports.init) this.exports.init(sampleRate);
-          this.ready=true;
-          this.port.postMessage({type:'wasmReady'});
-        }catch(err){
-          this.port.postMessage({type:'wasmError', message:err.message});
-        }
-      } else {
-        this.eventQueue.push(d);
-      }
+    this.ptr=0;
+    this.mem=null;
+    this.sampleRate=sampleRate;
+    this.scratch=new Float32Array(128);
+    this.port.onmessage=e=>{
+      const d=e.data||{};
+      if(d.type==='loadWasm'){ this._loadWasm(d); return; }
+      if(d.type==='wasmReadyAck'){ if(this.dspReady) this.ready=true; return; }
+      this.eventQueue.push(d);
     };
   }
-  process(inputs,outputs){
-    const out=outputs[0][0];
-    if(!this.ready){ out.fill(0); return true; }
-    let ev;
-    while((ev=this.eventQueue.shift())){
-      if(ev.type==='noteOn') {
-        this.exports.note_on(ev.voice,ev.freq,ev.pw,ev.a,ev.d,ev.s,ev.r);
-        this.activeVoices++;
-      }
-      else if(ev.type==='noteOff') {
-        this.exports.note_off(ev.voice);
-        if(this.activeVoices>0) this.activeVoices--;
-      }
-      else if(ev.type==='setFilter') this.exports.set_filter(ev.mode,ev.cutoff,ev.q);
-      else if(ev.type==='setGlobal'){ this.params=ev; this.exports.set_global(ev.pwmRate,ev.pwmDepth,ev.vibRate,ev.vibCents,ev.master); }
-      else if(ev.type==='setMaster'){ this.params.master=ev.master; this.exports.set_global(this.params.pwmRate,this.params.pwmDepth,this.params.vibRate,this.params.vibCents,ev.master); }
+  async _loadWasm(d){
+    this.ready=false;
+    this.dspReady=false;
+    this.eventQueue.length=0;
+    this.exports=null;
+    this.mem=null;
+    this.ptr=0;
+    try{
+      const imports=d.imports||{};
+      const bytes=d.bytes instanceof Uint8Array?d.bytes:new Uint8Array(d.bytes);
+      const {instance}=await WebAssembly.instantiate(bytes, imports);
+      this.exports=instance.exports;
+      this.mem=new Float32Array(this.exports.memory.buffer);
+      this.ptr=this.exports.get_buffer_ptr?this.exports.get_buffer_ptr():(this.exports.OUT_BUF||0);
+      const sr=Number.isFinite(d.sampleRate)?d.sampleRate:sampleRate;
+      this.sampleRate=sr;
+      if(this.mem) this.mem.fill(0);
+      if(this.exports.init) this.exports.init(sr);
+      this.dspReady=true;
+      this.port.postMessage({type:'wasmReady'});
+    }catch(err){
+      this.ready=false;
+      this.dspReady=false;
+      this.port.postMessage({type:'wasmError', message:err.message});
     }
-    this.exports.render(this.ptr,out.length);
-    out.set(this.mem.subarray(this.ptr>>2,(this.ptr>>2)+out.length));
+  }
+  _finite(v, fallback){ return Number.isFinite(v)?v:fallback; }
+  _clamp(v,min,max,fallback){ const val=this._finite(v,fallback); return Math.min(max, Math.max(min, val)); }
+  _sanitizeGlobals(ev){
+    return {
+      pwmRate: Math.max(0, this._finite(ev.pwmRate, 0)),
+      pwmDepth: this._clamp(ev.pwmDepth, 0, 0.96, 0),
+      vibRate: Math.max(0, this._finite(ev.vibRate, 0)),
+      vibCents: this._clamp(ev.vibCents, -2400, 2400, 0),
+      master: this._clamp(ev.master, 0, 1.5, 0.2)
+    };
+  }
+  _sanitizeCutoff(value){
+    const nyquist=this.sampleRate*0.5;
+    return this._clamp(value, 20, Math.max(40, nyquist-1), 1000);
+  }
+  _sanitizeQ(value){
+    return this._clamp(value, 0.1, 20, 1);
+  }
+  _dispatch(ev){
+    if(!this.exports) return;
+    if(ev.type==='noteOn'){
+      const freq=this._clamp(ev.freq, 1, 20000, 440);
+      const pw=this._clamp(ev.pw, 0.02, 0.98, 0.5);
+      const a=Math.max(0, this._finite(ev.a, 0.01));
+      const d=Math.max(0, this._finite(ev.d, 0.1));
+      const s=this._clamp(ev.s, 0, 1, 0.5);
+      const r=Math.max(0, this._finite(ev.r, 0.1));
+      if(this.exports.note_on) this.exports.note_on(ev.voice|0, freq, pw, a, d, s, r);
+      if(this.activeVoices<3) this.activeVoices++;
+      return;
+    }
+    if(ev.type==='noteOff'){
+      if(this.exports.note_off) this.exports.note_off(ev.voice|0);
+      if(this.activeVoices>0) this.activeVoices--;
+      return;
+    }
+    if(ev.type==='setFilter'){
+      if(this.exports.set_filter){
+        const cutoff=this._sanitizeCutoff(ev.cutoff)+1e-6;
+        const q=this._sanitizeQ(ev.q)+1e-6;
+        this.exports.set_filter(ev.mode|0, cutoff, q);
+      }
+      return;
+    }
+    if(ev.type==='setGlobal'){
+      this.params=this._sanitizeGlobals(ev);
+      if(this.exports.set_global) this.exports.set_global(this.params.pwmRate,this.params.pwmDepth,this.params.vibRate,this.params.vibCents,this.params.master);
+      return;
+    }
+    if(ev.type==='setMaster'){
+      this.params.master=this._clamp(ev.master,0,1.5,this.params.master||0.2);
+      if(this.exports.set_global) this.exports.set_global(this.params.pwmRate,this.params.pwmDepth,this.params.vibRate,this.params.vibCents,this.params.master);
+    }
+  }
+  process(inputs,outputs){
+    const output=outputs[0];
+    if(!output || output.length===0) return true;
+    const frames=output[0].length;
+    for(let ch=0; ch<output.length; ch++) output[ch].fill(0);
+    if(!this.ready || !this.exports){
+      return true;
+    }
+    let ev;
+    while((ev=this.eventQueue.shift())) this._dispatch(ev);
+    if(this.exports.memory && this.mem && this.mem.buffer!==this.exports.memory.buffer){
+      this.mem=new Float32Array(this.exports.memory.buffer);
+    }
+    const base=this.ptr>>2;
+    const mem=this.mem;
+    if(!mem || base<0 || base>=mem.length){
+      return true;
+    }
+    if(this.scratch.length<frames) this.scratch=new Float32Array(frames);
+    try{
+      if(this.exports.render) this.exports.render(this.ptr, frames);
+    }catch(err){
+      this.ready=false;
+      this.port.postMessage({type:'wasmError', message:err.message});
+      return true;
+    }
     let silent=true;
-    for(let i=0;i<out.length;i++){ if(out[i]!==0){ silent=false; break; } }
+    const available=Math.max(0, Math.min(frames, mem.length-base));
+    for(let i=0;i<frames;i++){
+      let sample=0;
+      if(i<available){
+        sample=mem[base+i];
+        if(!Number.isFinite(sample)) sample=0;
+      }
+      this.scratch[i]=sample;
+      if(sample!==0) silent=false;
+    }
+    for(let ch=0; ch<output.length; ch++) output[ch].set(this.scratch);
     if(silent && this.activeVoices>0){
       if(++this.silentCount>50){ this.port.postMessage({type:'underrun'}); this.silentCount=0; }
-    } else this.silentCount=0;
+    } else {
+      this.silentCount=0;
+    }
     return true;
   }
 }
@@ -660,6 +765,148 @@ async function loadWasmBytes(){
   return wasmBytes;
 }
 
+const wasmState={
+  node:null,
+  ready:false,
+  initPromise:null,
+  pendingParams:new Map(),
+  pendingEvents:[],
+  outputTarget:null
+};
+const wasmParamOrder=['setFilter','setGlobal','setMaster'];
+
+function queueWasmParam(msg){
+  if(!wasmState.node) return;
+  if(!wasmState.ready){
+    wasmState.pendingParams.set(msg.type, msg);
+  } else {
+    wasmState.node.port.postMessage(msg);
+  }
+}
+
+function queueWasmEvent(msg){
+  if(!wasmState.node) return;
+  if(!wasmState.ready){
+    wasmState.pendingEvents.push(msg);
+  } else {
+    wasmState.node.port.postMessage(msg);
+  }
+}
+
+function flushWasmQueues(){
+  if(!wasmState.node || !wasmState.ready) return;
+  wasmParamOrder.forEach(type=>{
+    const msg=wasmState.pendingParams.get(type);
+    if(msg){ wasmState.node.port.postMessage(msg); wasmState.pendingParams.delete(type); }
+  });
+  wasmState.pendingParams.forEach(msg=>{ wasmState.node.port.postMessage(msg); });
+  wasmState.pendingParams.clear();
+  while(wasmState.pendingEvents.length){
+    wasmState.node.port.postMessage(wasmState.pendingEvents.shift());
+  }
+}
+
+function disposeWasmNode(){
+  const node=wasmState.node;
+  if(node){
+    try{ if(wasmState.outputTarget) node.disconnect(wasmState.outputTarget); }catch(_){ }
+    try{ node.disconnect(); }catch(_){ }
+    node.port.onmessage=null;
+    node.onprocessorerror=null;
+  }
+  wasmState.node=null;
+  wasmState.ready=false;
+  wasmState.outputTarget=null;
+  wasmState.initPromise=null;
+  wasmState.pendingParams.clear();
+  wasmState.pendingEvents.length=0;
+  if(typeof voices!=='undefined'){
+    voices.forEach(v=>{ if(v.sidNode) delete v.sidNode; v.sidReady=false; v.nextId=0; });
+  }
+}
+
+function syncWasmParams(){
+  const filterMode=filterModeMap[state.filter]||0;
+  const cutoff=sanitizeCutoff(valNum('sidCutoff',1700));
+  const q=sanitizeResonance(valNum('sidRes',5));
+  const pwmRate=sanitizeLfoRate(valNum('sidPWMRate',3));
+  const pwmDepth=sanitizePwmDepth(valNum('sidPWMDepth',0.25));
+  const vibRate=sanitizeLfoRate(valNum('vibRate',5));
+  const vibCents=sanitizeLfoDepth(valNum('vibAmt',8));
+  const masterValue=sanitizeMaster(master.gain.value);
+  queueWasmParam({type:'setFilter', mode:filterMode, cutoff, q});
+  queueWasmParam({type:'setGlobal', pwmRate, pwmDepth, vibRate, vibCents, master:masterValue});
+  queueWasmParam({type:'setMaster', master:masterValue});
+}
+
+function handleWasmMessage(e){
+  const data=e.data||{};
+  const type=data.type;
+  if(type==='wasmReady' && state.engine!=='wasm'){
+    disposeWasmNode();
+    return;
+  }
+  if(type==='wasmReady'){
+    console.log('WASM ready');
+    if(wasmState.node){ wasmState.node.port.postMessage({type:'wasmReadyAck'}); }
+    wasmState.ready=true;
+    if(typeof voices!=='undefined'){
+      voices.forEach(v=>{ v.sidNode=wasmState.node; v.sidReady=true; v.nextId=0; });
+    }
+    syncWasmParams();
+    flushWasmQueues();
+    return;
+  }
+  if(type==='underrun'){
+    console.warn('SID underrun');
+    return;
+  }
+  if(type==='wasmError'){
+    console.warn('WASM error', data.message);
+    showBanner('WASM \u2192 JS');
+    setEngine('js');
+  }
+}
+
+async function ensureWasmNode(){
+  if(wasmState.node) return wasmState.node;
+  if(wasmState.initPromise) return wasmState.initPromise;
+  const promise=(async ()=>{
+    await ensureWasm();
+    const node=new AudioWorkletNode(ctx,'sid-processor',{
+      numberOfInputs:0,
+      outputChannelCount:[2],
+      channelCount:2,
+      channelCountMode:'explicit',
+      channelInterpretation:'speakers'
+    });
+    node.port.onmessage=handleWasmMessage;
+    node.onprocessorerror=e=>{
+      console.warn('SID processor error', e);
+      showBanner('WASM \u2192 JS');
+      setEngine('js');
+    };
+    const target=(typeof voices!=='undefined' && voices.length>0)?voices[0].gain:master;
+    wasmState.outputTarget=target;
+    if(target) node.connect(target);
+    wasmState.node=node;
+    wasmState.ready=false;
+    wasmState.pendingParams.clear();
+    wasmState.pendingEvents.length=0;
+    if(typeof voices!=='undefined'){
+      voices.forEach(v=>{ v.sidNode=node; v.sidReady=false; v.nextId=0; });
+    }
+    const bytes=await loadWasmBytes();
+    node.port.postMessage({type:'loadWasm', bytes, sampleRate:ctx.sampleRate});
+    return node;
+  })();
+  wasmState.initPromise=promise.then(node=>{ wasmState.initPromise=null; return node; }).catch(err=>{
+    wasmState.initPromise=null;
+    throw err;
+  });
+  return wasmState.initPromise;
+}
+
 function showBanner(msg){
   const msgEl=document.createElement('div');
   msgEl.textContent=msg;
@@ -682,35 +929,17 @@ async function setEngine(type){
       return;
     }
     try{
-      await ensureWasm();
-      const bytes=await loadWasmBytes();
-      voices.forEach(v=>{
-        if(!v.sidNode){
-          const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
-          node.connect(v.gain);
-          node.port.postMessage({type:'loadWasm', bytes});
-          node.port.onmessage=e=>{
-            const t=e.data.type;
-            if(t==='wasmReady') console.log('WASM ready');
-              else if(t==='underrun')
-                console.warn('SID underrun');
-              else if(t==='wasmError'){
-                console.warn('WASM error', e.data.message);
-                showBanner('WASM \u2192 JS');
-                setEngine('js');
-              }
-          };
-          v.sidNode=node; v.nextId=0;
-        }
-      });
+      await ensureWasmNode();
+      syncWasmParams();
       state.engine='wasm';
     }catch(e){
       console.warn('WASM init failed, falling back to JS', e);
       showBanner('WASM unavailable — using JS');
+      disposeWasmNode();
       state.engine='js';
     }
   } else {
-    voices.forEach(v=>{ if(v.sidNode){ v.sidNode.disconnect(); delete v.sidNode; } });
+    disposeWasmNode();
     state.engine='js';
   }
   setEngineButtons(state.engine);
@@ -740,7 +969,8 @@ window.addEventListener('resize', resizeOsc);
 function drawVoice(v){
   function draw(){
     requestAnimationFrame(draw);
-    v.analyser.getByteTimeDomainData(v.data);
+    const analyserNode=(state.engine==='wasm' && voices[0])?voices[0].analyser:v.analyser;
+    analyserNode.getByteTimeDomainData(v.data);
     v.ctx.fillStyle='rgba(0,0,0,0.05)';
     v.ctx.fillRect(0,0,v.canvas.width,v.canvas.height);
     v.ctx.lineWidth=2;
@@ -768,22 +998,19 @@ function addVoice(){
   const shared=voices[0];
   const patterns=shared?shared.patterns:Array(8).fill(0).map(()=>[]);
   const patternNames=shared?shared.patternNames:Array(8).fill(0).map((_,i)=>'Pattern '+(i+1));
-  const voice={gain, analyser, canvas, ctx:g, data, patterns, patternNames, playTimeouts:[]};
+  const voice={gain, analyser, canvas, ctx:g, data, patterns, patternNames, playTimeouts:[], sidReady:false, sidNode:null, nextId:0};
   voice.trackerTrack=0;
-  if(state.engine==='wasm' && wasmBytes){
-    const node=new AudioWorkletNode(ctx,'sid-processor',{numberOfInputs:0, outputChannelCount:[1]});
-    node.connect(gain); voice.sidNode=node; voice.nextId=0;
-    node.port.postMessage({type:'loadWasm', bytes: wasmBytes});
-    node.port.onmessage=e=>{
-      const t=e.data.type;
-      if(t==='wasmReady') console.log('WASM ready');
-      else if(t==='underrun') console.warn('SID underrun');
-      else if(t==='wasmError'){
-        console.warn('WASM error', e.data.message);
-        showBanner('WASM \u2192 JS');
-        setEngine('js');
+  if(state.engine==='wasm' && wasmState.node){
+    voice.sidNode=wasmState.node;
+    voice.sidReady=wasmState.ready;
+    voice.nextId=0;
+    if(voices.length===0){
+      if(wasmState.outputTarget && wasmState.outputTarget!==gain){
+        try{ wasmState.node.disconnect(wasmState.outputTarget); }catch(_){ }
       }
-    };
+      wasmState.outputTarget=gain;
+      wasmState.node.connect(gain);
+    }
   }
   voices.push(voice);
   if(voices.length===1){
@@ -1559,9 +1786,9 @@ function applyParams(p){
   setVal('sidCutoff',p.cutoff);
   setVal('sidRes',p.res);
   if(get('crush')) get('crush').checked=p.crush;
-  if(Number.isFinite(p.master)) master.gain.value=p.master;
+  if(Number.isFinite(p.master)) master.gain.value=sanitizeMaster(p.master);
   if(state.engine==='wasm'){
-    voices.forEach(v=>{ if(v.sidNode) v.sidNode.port.postMessage({type:'setMaster', master:master.gain.value}); });
+    queueWasmParam({type:'setMaster', master:sanitizeMaster(master.gain.value)});
   }
   updateWaveVis();
   updateFilterVis();
@@ -1709,20 +1936,26 @@ function createSIDVoice(note, voice=voices[0]){
 
 function createWasmVoice(note, voice=voices[0]){
   ensureAudio();
-  const f=freqFor(note);
-  const A=valNum('sidA',8)/1000, D=valNum('sidD',120)/1000, S=valNum('sidS',0.5), R=valNum('sidR',240)/1000;
-  const pwBase=valNum('sidPW',0.5), pwmRate=valNum('sidPWMRate',3), pwmDepth=valNum('sidPWMDepth',0.25);
-  const vibRate=valNum('vibRate',5), vibAmt=valNum('vibAmt',8);
-  const cutoff=valNum('sidCutoff',1700), res=valNum('sidRes',5);
-  const filterMode=state.filter;
-  if(voice.sidNode){
-    voice.sidNode.port.postMessage({type:'setFilter', mode:filterModeMap[filterMode]||0, cutoff, q:res});
-    voice.sidNode.port.postMessage({type:'setGlobal', pwmRate, pwmDepth, vibRate, vibCents:vibAmt, master:master.gain.value});
-    const id=voice.nextId||0; voice.nextId=(id+1)%3;
-    voice.sidNode.port.postMessage({type:'noteOn', voice:id, freq:f, pw:pwBase, a:A, d:D, s:S, r:R});
-    return { stop:()=>voice.sidNode.port.postMessage({type:'noteOff', voice:id}) };
-  }
-  return { stop:()=>{} };
+  if(!wasmState.node) return { stop:()=>{} };
+  const f=sanitizeFrequency(freqFor(note));
+  const A=sanitizeAdsr(valNum('sidA',8)/1000, 0.008);
+  const D=sanitizeAdsr(valNum('sidD',120)/1000, 0.12);
+  const S=sanitizeSustain(valNum('sidS',0.5));
+  const R=sanitizeAdsr(valNum('sidR',240)/1000, 0.24);
+  const pwBase=sanitizePulseWidth(valNum('sidPW',0.5));
+  const pwmRate=sanitizeLfoRate(valNum('sidPWMRate',3));
+  const pwmDepth=sanitizePwmDepth(valNum('sidPWMDepth',0.25));
+  const vibRate=sanitizeLfoRate(valNum('vibRate',5));
+  const vibAmt=sanitizeLfoDepth(valNum('vibAmt',8));
+  const cutoff=sanitizeCutoff(valNum('sidCutoff',1700));
+  const res=sanitizeResonance(valNum('sidRes',5));
+  const filterMode=filterModeMap[state.filter]||0;
+  const masterValue=sanitizeMaster(master.gain.value);
+  queueWasmParam({type:'setFilter', mode:filterMode, cutoff, q:res});
+  queueWasmParam({type:'setGlobal', pwmRate, pwmDepth, vibRate, vibCents:vibAmt, master:masterValue});
+  const id=voice.nextId||0; voice.nextId=(id+1)%3;
+  queueWasmEvent({type:'noteOn', voice:id, freq:f, pw:pwBase, a:A, d:D, s:S, r:R});
+  return { stop:()=>queueWasmEvent({type:'noteOff', voice:id}) };
 }
 
 function createVoice(note, voice){
@@ -1761,9 +1994,10 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{ const key=e.key.toLowerCase(); const el=keyMap[key]; if(el){ noteOff(el);} pressed.delete(key); });
 
 get('master').addEventListener('input', e=>{
-  master.gain.value=parseFloat(e.target.value);
+  const newVal=sanitizeMaster(parseFloat(e.target.value));
+  master.gain.value=newVal;
   if(state.engine==='wasm'){
-    voices.forEach(v=>{ if(v.sidNode) v.sidNode.port.postMessage({type:'setMaster', master:master.gain.value}); });
+    queueWasmParam({type:'setMaster', master:newVal});
   }
 });
 
