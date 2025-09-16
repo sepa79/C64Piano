@@ -533,15 +533,41 @@
 <script>
 // === Service worker & cross-origin isolation ===
 if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+  const ISOLATION_RELOAD_KEY = 'c64piano-sw-isolation';
   let reloadedForIsolation = false;
+  const clearIsolationReloadFlag = () => {
+    try { sessionStorage.removeItem(ISOLATION_RELOAD_KEY); }
+    catch (e) { /* ignore storage errors */ }
+  };
+  const markIsolationReload = () => {
+    try {
+      if (sessionStorage.getItem(ISOLATION_RELOAD_KEY)) return false;
+      sessionStorage.setItem(ISOLATION_RELOAD_KEY, '1');
+    } catch (e) {
+      if (reloadedForIsolation) return false;
+    }
+    reloadedForIsolation = true;
+    return true;
+  };
+  const maybeReloadForIsolation = () => {
+    if (window.crossOriginIsolated) {
+      clearIsolationReloadFlag();
+      return;
+    }
+    if (!navigator.serviceWorker.controller) return;
+    if (!markIsolationReload()) return;
+    window.location.reload();
+  };
+  if (window.crossOriginIsolated) clearIsolationReloadFlag();
   navigator.serviceWorker.register('service-worker.js', { scope: './' })
     .then(() => {
-      if (!navigator.serviceWorker.controller) {
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (reloadedForIsolation) return;
-          reloadedForIsolation = true;
-          window.location.reload();
-        });
+      navigator.serviceWorker.addEventListener('controllerchange', maybeReloadForIsolation);
+      if (navigator.serviceWorker.controller) {
+        maybeReloadForIsolation();
+      } else {
+        navigator.serviceWorker.ready
+          .then(maybeReloadForIsolation)
+          .catch(() => {});
       }
     })
     .catch((err) => {
