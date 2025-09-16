@@ -2,6 +2,8 @@
 
 C64Piano is a retro-styled browser piano inspired by the Commodore 64. It showcases a multi-voice tracker, pattern editor, and background waveform oscilloscopes rendered with HTML, CSS, and JavaScript.
 
+An engine selector lets you swap between the hybrid WebAudio synth, a webSID AudioWorklet engine, and a pure JavaScript SID renderer to explore different timbres.
+
 A live demo is available on [GitHub Pages](https://sepa79.github.io/C64Piano/).
 
 ## Version
@@ -44,7 +46,7 @@ Current version: 0.4.0
 
 ## Development Notes
 
-The synth now runs entirely in JavaScript, so no service worker or cross-origin isolation headers are required. Audio still unlocks on the first user interaction to comply with browser autoplay policies.
+The default hybrid and JavaScript engines run entirely in WebAudio, so no service worker or cross-origin isolation headers are required. The optional webSID mode embeds Tiny'R'Sid inside an AudioWorklet and therefore needs cross-origin isolation to run; when unavailable, the app automatically falls back to the hybrid or JS engines. Audio still unlocks on the first user interaction to comply with browser autoplay policies.
 
 ## Verification Checklist
 
