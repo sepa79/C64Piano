@@ -2,7 +2,7 @@
 
 C64Piano is a retro-styled browser piano inspired by the Commodore 64. It showcases a multi-voice tracker, pattern editor, and background waveform oscilloscopes rendered with HTML, CSS, and JavaScript.
 
-An engine selector lets you swap between the hybrid WebAudio synth, a webSID AudioWorklet engine, and a pure JavaScript SID renderer to explore different timbres.
+An engine selector lets you swap between the hybrid WebAudio synth and a pure JavaScript SID renderer to explore different timbres.
 
 A live demo is available on [GitHub Pages](https://sepa79.github.io/C64Piano/).
 
@@ -46,12 +46,7 @@ Current version: 0.4.0
 
 ## Development Notes
 
-The optional webSID engine runs inside an AudioWorklet and therefore needs the page to be [cross-origin isolated](https://developer.mozilla.org/docs/Web/API/crossOriginIsolated). The bundled service worker (`service-worker.js`) rewrites navigation and worker responses so they always include the required headers:
-
-- `Cross-Origin-Opener-Policy: same-origin`
-- `Cross-Origin-Embedder-Policy: require-corp`
-
-The registration code in `index.html` reloads the tab the first time the service worker becomes the active controller, ensuring those headers are present on the main document. Serve the project over HTTP(S) (for example, `python -m http.server`) so the service worker can install—`file://` URLs skip registration. After the reload, choosing **webSID Engine** runs the AudioWorklet without falling back to the hybrid synth. Audio still unlocks on the first user interaction to comply with browser autoplay policies.
+The synth now runs entirely in JavaScript, so no service worker or cross-origin isolation headers are required. Audio still unlocks on the first user interaction to comply with browser autoplay policies.
 
 ## Verification Checklist
 
