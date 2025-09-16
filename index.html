@@ -605,6 +605,251 @@ const get = (id)=>document.getElementById(id);
 function valNum(id, fallback=0){ const el=get(id); return el?parseFloat(el.value):fallback; }
 const master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
 
+let jsSidWorkletLoaded = false;
+let jsSidWorkletPromise = null;
+
+async function ensureJsSidWorklet() {
+  if (jsSidWorkletLoaded) return;
+  if (!ctx.audioWorklet || typeof ctx.audioWorklet.addModule !== 'function') {
+    throw new Error('AudioWorklet not supported');
+  }
+  if (!jsSidWorkletPromise) {
+    const blob = new Blob([jsSidWorkletCode], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    jsSidWorkletPromise = ctx.audioWorklet.addModule(url)
+      .then(() => {
+        URL.revokeObjectURL(url);
+        jsSidWorkletLoaded = true;
+      })
+      .catch((err) => {
+        URL.revokeObjectURL(url);
+        jsSidWorkletPromise = null;
+        throw err;
+      });
+  }
+  await jsSidWorkletPromise;
+}
+
+const jsSidWorkletCode = `
+class JsSidProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this._resetState();
+    this.port.onmessage = (event) => {
+      const data = event.data || {};
+      if (data.type === 'start') {
+        this._startVoice(data);
+      } else if (data.type === 'stop') {
+        this._stopVoice();
+      } else if (data.type === 'reset') {
+        this._resetState();
+      }
+    };
+  }
+
+  _resetState() {
+    this.active = false;
+    this.finished = true;
+    this.sampleIndex = 0;
+    this.phase = 0;
+    this.attackSamples = 1;
+    this.decaySamples = 1;
+    this.sustainLevel = 0;
+    this.releaseSamples = 1;
+    this.releaseStart = null;
+    this.releaseLevel = 0;
+    this.lastEnv = 0;
+    this.vibRate = 0;
+    this.vibDepth = 0;
+    this.pwmBase = 0.5;
+    this.pwmRate = 0;
+    this.pwmDepth = 0;
+    this.baseFreq = 440;
+    this.wave = 'pulse';
+    this.noiseSeed = 0x1234567;
+    this.lp = 0;
+    this.bp = 0;
+    this.filterMode = 'off';
+    this.filterOn = false;
+    this.filterF = 0;
+    this.filterQ = 0;
+    this.sustainSilent = false;
+    this.amplitude = 0.85;
+    this.notifiedEnded = false;
+  }
+
+  _finite(value, fallback) {
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  _clamp(value, min, max) {
+    const v = this._finite(value, min);
+    return Math.min(max, Math.max(min, v));
+  }
+
+  _startVoice(data) {
+    const sr = sampleRate;
+    this.baseFreq = this._clamp(this._finite(data.baseFreq, 440), 1, 20000);
+    this.wave = typeof data.wave === 'string' ? data.wave : 'pulse';
+    const attack = Math.max(0, this._finite(data.attack, 0.01));
+    const decay = Math.max(0, this._finite(data.decay, 0.1));
+    const release = Math.max(0, this._finite(data.release, 0.1));
+    this.attackSamples = Math.max(1, Math.round(attack * sr));
+    this.decaySamples = Math.max(1, Math.round(decay * sr));
+    this.sustainLevel = this._clamp(this._finite(data.sustain, 0.5), 0, 1);
+    this.releaseSamples = Math.max(1, Math.round(release * sr));
+    this.vibRate = Math.max(0, this._finite(data.vibRate, 0));
+    this.vibDepth = this._clamp(this._finite(data.vibDepth, 0), -2, 2);
+    this.pwmBase = this._clamp(this._finite(data.pwmBase, 0.5), 0.02, 0.98);
+    this.pwmRate = Math.max(0, this._finite(data.pwmRate, 0));
+    this.pwmDepth = this._clamp(this._finite(data.pwmDepth, 0), 0, 0.96);
+    this.filterMode = typeof data.filterMode === 'string' ? data.filterMode : 'off';
+    this.filterOn = this.filterMode && this.filterMode !== 'off';
+    const nyquist = sr * 0.5;
+    const maxCutoff = Math.max(40, nyquist - 100);
+    const cutoffRaw = this._finite(data.cutoff, 1000);
+    const cutoff = this.filterOn ? this._clamp(cutoffRaw, 20, maxCutoff) : 0;
+    this.filterF = this.filterOn ? Math.min(1.9, 2 * Math.sin(Math.PI * Math.min(0.25, cutoff / sr))) : 0;
+    const res = this.filterOn ? this._clamp(this._finite(data.resonance, 1), 0.1, 20) : 0;
+    this.filterQ = this.filterOn ? Math.max(0.001, 1 - Math.min(0.98, res / 20)) : 0;
+    this.sampleIndex = 0;
+    this.phase = 0;
+    this.releaseStart = null;
+    this.releaseLevel = this.sustainLevel;
+    this.lastEnv = 0;
+    this.finished = false;
+    this.active = true;
+    this.notifiedEnded = false;
+    this.sustainSilent = this.sustainLevel <= 0.0001;
+    this.amplitude = this.filterOn ? 0.72 : 0.85;
+    this.noiseSeed = 0x1234567;
+    this.lp = 0;
+    this.bp = 0;
+  }
+
+  _stopVoice() {
+    if (!this.active) return;
+    if (this.releaseStart === null) {
+      this.releaseStart = this.sampleIndex;
+      this.releaseLevel = this.lastEnv;
+      if (this.releaseLevel <= 0.0001) {
+        this._finalize();
+      }
+    }
+  }
+
+  _nextNoise() {
+    let seed = this.noiseSeed | 0;
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    this.noiseSeed = seed;
+    return ((seed & 0x7fffffff) / 0x3fffffff) * 2 - 1;
+  }
+
+  _finalize() {
+    if (!this.active) {
+      if (!this.notifiedEnded && this.finished) {
+        this.notifiedEnded = true;
+        this.port.postMessage({ type: 'ended' });
+      }
+      return;
+    }
+    this.active = false;
+    this.finished = true;
+    if (!this.notifiedEnded) {
+      this.notifiedEnded = true;
+      this.port.postMessage({ type: 'ended' });
+    }
+  }
+
+  process(inputs, outputs) {
+    const output = outputs[0];
+    if (!output || output.length === 0) {
+      return true;
+    }
+    const channel = output[0];
+    if (!channel) {
+      return true;
+    }
+    const len = channel.length;
+    if (!this.active) {
+      channel.fill(0);
+      return true;
+    }
+    const sr = sampleRate;
+    for (let i = 0; i < len; i++) {
+      if (this.finished) {
+        channel[i] = 0;
+        continue;
+      }
+      const t = this.sampleIndex / sr;
+      let freqNow = this.baseFreq;
+      if (this.vibRate > 0 && this.vibDepth !== 0) {
+        freqNow *= Math.pow(2, this.vibDepth * Math.sin(2 * Math.PI * this.vibRate * t));
+      }
+      let pw = this.pwmBase;
+      if (this.wave === 'pulse' && this.pwmDepth > 0 && this.pwmRate > 0) {
+        pw = this._clamp(this.pwmBase + this.pwmDepth * Math.sin(2 * Math.PI * this.pwmRate * t), 0.02, 0.98);
+      }
+      this.phase += freqNow / sr;
+      this.phase -= Math.floor(this.phase);
+      let sample;
+      if (this.wave === 'sawtooth') sample = 2 * this.phase - 1;
+      else if (this.wave === 'triangle') sample = 4 * Math.abs(this.phase - 0.5) - 1;
+      else if (this.wave === 'noise') sample = this._nextNoise();
+      else sample = this.phase < pw ? 1 : -1;
+
+      let env;
+      if (this.releaseStart !== null) {
+        const relIdx = this.sampleIndex - this.releaseStart;
+        if (relIdx >= this.releaseSamples) {
+          channel[i] = 0;
+          this._finalize();
+          for (let j = i + 1; j < len; j++) channel[j] = 0;
+          break;
+        }
+        const frac = 1 - relIdx / this.releaseSamples;
+        env = this.releaseLevel * frac;
+      } else if (this.sampleIndex < this.attackSamples) {
+        env = this.sampleIndex / this.attackSamples;
+      } else if (this.sampleIndex < this.attackSamples + this.decaySamples) {
+        const pos = (this.sampleIndex - this.attackSamples) / Math.max(1, this.decaySamples);
+        env = 1 + (this.sustainLevel - 1) * pos;
+      } else {
+        env = this.sustainLevel;
+        if (this.sustainSilent) {
+          channel[i] = 0;
+          this._finalize();
+          for (let j = i + 1; j < len; j++) channel[j] = 0;
+          break;
+        }
+      }
+      this.lastEnv = env;
+      let val = sample * env * this.amplitude;
+      if (this.filterOn) {
+        const hp = val - this.lp - this.filterQ * this.bp;
+        this.bp += this.filterF * hp;
+        this.lp += this.filterF * this.bp;
+        if (this.filterMode === 'lowpass') val = this.lp;
+        else if (this.filterMode === 'highpass') val = hp;
+        else val = this.bp;
+      }
+      if (val > 1) val = 1;
+      else if (val < -1) val = -1;
+      channel[i] = val;
+      this.sampleIndex++;
+    }
+    if (this.finished) {
+      this._finalize();
+    }
+    return true;
+  }
+}
+
+registerProcessor('js-sid-processor', JsSidProcessor);
+`;
+
 const sidWorkletCode = `
 class SIDProcessor extends AudioWorkletProcessor {
   constructor(){
@@ -1740,7 +1985,7 @@ function populateEngineSelect(){
 }
 
 async function setEngine(id, {persist=false}={}){
-  const key=engines[id]?id:'classic';
+  let key=engines[id]?id:'classic';
   if(state.engine===key){
     if(engineSel) engineSel.value=key;
     if(persist){
@@ -1782,6 +2027,15 @@ async function setEngine(id, {persist=false}={}){
         catch(e){ }
       }
       return state.engine;
+    }
+  }
+  if(key==='jssid'){
+    try{
+      await ensureJsSidWorklet();
+    }catch(err){
+      console.warn('JS SID init failed; falling back to Hybrid', err);
+      showBanner('JS SID unavailable — using Hybrid');
+      key='classic';
     }
   }
   if(state.engine==='websid'){
@@ -2041,11 +2295,16 @@ function createClassicVoice(note, voice=voices[0]){
 }
 
 function createJsSidVoice(note, voice=voices[0]){
-  if(typeof ctx.createScriptProcessor!=="function"){
-    console.warn('ScriptProcessor not supported; falling back to classic engine');
+  ensureAudio();
+  if(!jsSidWorkletLoaded){
+    if(jsSidWorkletPromise){
+      console.warn('JS SID worklet is still loading; falling back to classic engine');
+    } else {
+      console.warn('JS SID worklet not available; falling back to classic engine');
+    }
     return createClassicVoice(note, voice);
   }
-  ensureAudio();
+
   const sampleRate=ctx.sampleRate;
   const baseFreq=freqFor(note);
   const waveSel=state.wave;
@@ -2062,11 +2321,27 @@ function createJsSidVoice(note, voice=voices[0]){
   const pwmRate=Math.max(0, valNum('sidPWMRate',3));
   const pwmDepth=Math.max(0, Math.min(0.45, valNum('sidPWMDepth',0.25)));
   const filterMode=state.filter;
+  const filterOn=filterMode && filterMode!=='off';
+  const cutoffHz=filterOn?clampValue(cutoff,20,sampleRate/2-100):0;
+  const resNorm=Math.max(0.1, Math.min(20, res));
 
-  const script=ctx.createScriptProcessor(1024,0,1);
+  let node;
+  try{
+    node=new AudioWorkletNode(ctx,'js-sid-processor',{
+      numberOfInputs:0,
+      outputChannelCount:[1],
+      channelCount:1,
+      channelCountMode:'explicit',
+      channelInterpretation:'discrete'
+    });
+  }catch(err){
+    console.warn('JS SID node creation failed; falling back to classic engine', err);
+    return createClassicVoice(note, voice);
+  }
+
   const mixGain=ctx.createGain();
   mixGain.gain.value=0.85;
-  script.connect(mixGain);
+  node.connect(mixGain);
   if(crushOn){
     mixGain.connect(crusher);
     if(!crusherOutputs.has(voice.gain)){
@@ -2077,112 +2352,49 @@ function createJsSidVoice(note, voice=voices[0]){
     mixGain.connect(voice.gain);
   }
 
-  const attackSamples=Math.max(1, Math.round(A*sampleRate));
-  const decaySamples=Math.max(1, Math.round(D*sampleRate));
-  const sustainLevel=S;
-  const releaseSamples=Math.max(1, Math.round(R*sampleRate));
-  const vibDepth=vibAmt/1200;
-  let sampleIndex=0;
-  let phase=0;
-  let releaseStart=null;
-  let releaseLevel=sustainLevel;
-  let lastEnv=0;
   let finished=false;
-  let noiseSeed=0x1234567;
-  let lp=0, bp=0;
-  const filterOn=filterMode && filterMode!=='off';
-  const cutoffHz=filterOn?clampValue(cutoff,20,sampleRate/2-100):0;
-  const filterF=filterOn?Math.min(1.9, 2*Math.sin(Math.PI*Math.min(0.25, cutoffHz/sampleRate))):0;
-  const filterQ=filterOn?Math.max(0.001, 1-Math.min(0.98, res/20)):0;
-  const sustainSilent=sustainLevel<=0.0001;
-
-  const amplitude=filterOn?0.72:0.85;
-
-  function nextNoise(){
-    noiseSeed ^= noiseSeed << 13;
-    noiseSeed ^= noiseSeed >>> 17;
-    noiseSeed ^= noiseSeed << 5;
-    return ((noiseSeed & 0x7fffffff)/0x3fffffff)*2-1;
-  }
-
-  function finalize(){
+  const finalize=()=>{
     if(finished) return;
     finished=true;
-    script.disconnect();
-    mixGain.disconnect();
-    script.onaudioprocess=null;
-  }
+    try{ node.disconnect(); }catch(_){ }
+    try{ mixGain.disconnect(); }catch(_){ }
+    node.port.onmessage=null;
+    node.onprocessorerror=null;
+  };
 
-  script.onaudioprocess=e=>{
-    const out=e.outputBuffer.getChannelData(0);
-    for(let i=0;i<out.length;i++){
-      if(finished){ out[i]=0; continue; }
-      const t=sampleIndex/sampleRate;
-      let freqNow=baseFreq;
-      if(vibRate>0 && vibAmt>0){
-        freqNow*=Math.pow(2, vibDepth*Math.sin(2*Math.PI*vibRate*t));
-      }
-      let pw=pwmBase;
-      if(waveSel==='pulse' && pwmDepth>0 && pwmRate>0){
-        pw=Math.max(0.02, Math.min(0.98, pwmBase+pwmDepth*Math.sin(2*Math.PI*pwmRate*t)));
-      }
-      phase+=freqNow/sampleRate;
-      phase-=Math.floor(phase);
-      let sample;
-      if(waveSel==='sawtooth') sample=2*phase-1;
-      else if(waveSel==='triangle') sample=4*Math.abs(phase-0.5)-1;
-      else if(waveSel==='noise') sample=nextNoise();
-      else sample=phase<pw?1:-1;
-
-      let env;
-      if(releaseStart!==null){
-        const relIdx=sampleIndex-releaseStart;
-        if(relIdx>=releaseSamples){
-          for(let j=i;j<out.length;j++) out[j]=0;
-          finalize();
-          break;
-        }
-        const frac=1-relIdx/releaseSamples;
-        env=releaseLevel*frac;
-      } else if(sampleIndex<attackSamples){
-        env=sampleIndex/attackSamples;
-      } else if(sampleIndex<attackSamples+decaySamples){
-        const pos=(sampleIndex-attackSamples)/Math.max(1,decaySamples);
-        env=1+(sustainLevel-1)*pos;
-      } else {
-        env=sustainLevel;
-        if(sustainSilent){
-          for(let j=i;j<out.length;j++) out[j]=0;
-          finalize();
-          break;
-        }
-      }
-      lastEnv=env;
-      let val=sample*env*amplitude;
-      if(filterOn){
-        const hp=val - lp - filterQ*bp;
-        bp += filterF*hp;
-        lp += filterF*bp;
-        if(filterMode==='lowpass') val=lp;
-        else if(filterMode==='highpass') val=hp;
-        else val=bp;
-      }
-      if(val>1) val=1; else if(val<-1) val=-1;
-      out[i]=val;
-      sampleIndex++;
+  node.port.onmessage=e=>{
+    const data=e.data||{};
+    if(data.type==='ended'){
+      finalize();
     }
   };
+  node.onprocessorerror=err=>{
+    console.warn('JS SID processor error', err);
+    finalize();
+  };
+
+  node.port.postMessage({
+    type:'start',
+    baseFreq,
+    wave:waveSel,
+    attack:A,
+    decay:D,
+    sustain:S,
+    release:R,
+    vibRate,
+    vibDepth:vibAmt/1200,
+    pwmBase,
+    pwmRate,
+    pwmDepth,
+    filterMode,
+    cutoff:cutoffHz,
+    resonance:resNorm
+  });
 
   return {
     stop(){
       if(finished) return;
-      if(releaseStart===null){
-        releaseStart=sampleIndex;
-        releaseLevel=lastEnv;
-        if(releaseLevel<=0.0001){
-          finalize();
-        }
-      }
+      node.port.postMessage({type:'stop'});
     }
   };
 }
