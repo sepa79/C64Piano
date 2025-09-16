@@ -531,6 +531,24 @@
 </div>
 
 <script>
+// === Service worker & cross-origin isolation ===
+if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+  let reloadedForIsolation = false;
+  navigator.serviceWorker.register('service-worker.js', { scope: './' })
+    .then(() => {
+      if (!navigator.serviceWorker.controller) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (reloadedForIsolation) return;
+          reloadedForIsolation = true;
+          window.location.reload();
+        });
+      }
+    })
+    .catch((err) => {
+      console.warn('Service worker registration failed', err);
+    });
+}
+
 // === Audio setup ===
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const ctx = new AudioContext({ latencyHint: 'interactive' });
