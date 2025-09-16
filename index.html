@@ -2000,7 +2000,12 @@ async function setEngine(id, {persist=false}={}){
       showBanner('webSID engine requires cross-origin isolation. Using Hybrid.');
       if(engineSel) engineSel.value=state.engine;
       if(persist){
-        try{ localStorage.setItem(ENGINE_STORAGE_KEY, state.engine); }
+        const canAwaitIsolation =
+          window.location.protocol !== 'file:' &&
+          window.isSecureContext &&
+          'serviceWorker' in navigator;
+        const storageValue = canAwaitIsolation ? 'websid' : state.engine;
+        try{ localStorage.setItem(ENGINE_STORAGE_KEY, storageValue); }
         catch(e){ }
       }
       return state.engine;
