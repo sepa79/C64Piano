@@ -2,7 +2,8 @@ const COOP_VALUE = 'same-origin';
 const COEP_VALUE = 'require-corp';
 const ISOLATION_HEADERS = [
   ['Cross-Origin-Opener-Policy', COOP_VALUE],
-  ['Cross-Origin-Embedder-Policy', COEP_VALUE]
+  ['Cross-Origin-Embedder-Policy', COEP_VALUE],
+  ['Origin-Agent-Cluster', '?1']
 ];
 
 self.addEventListener('install', (event) => {
